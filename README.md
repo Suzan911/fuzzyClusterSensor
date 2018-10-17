@@ -5,3 +5,5 @@ Please install python library
 pip install -U matplotlib
 pip install xlrd
 ```
+Learn how to use git
+https://learngitbranching.js.org/
