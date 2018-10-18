@@ -8,7 +8,6 @@ class Node:
 	def __init__(self, x=0, y=0, energy=10, nodetype='CM', name='node'):
 		"""
 		Initial variables for new node
-
 		Args:
 		    x (float): Position x
 		    y (float): Position y
@@ -23,7 +22,6 @@ class Node:
 	def getX(self):
 		"""
 		Get position x of node
-
 		Return
 		    Position x of node
 		"""
@@ -32,7 +30,6 @@ class Node:
 	def getY(self):
 		"""
 		Get position y of node
-
 		Return
 		    Position y of node
 		"""
@@ -41,7 +38,6 @@ class Node:
 	def getEnergy(self):
 		"""
 		Get energy of node
-
 		Return
 		    Energy of node
 		"""
@@ -50,7 +46,6 @@ class Node:
 	def getType(self):
 		"""
 		Get type of node
-
 		Return
 		    Type of node (CH, CCH, CM)
 		"""
@@ -62,10 +57,9 @@ class Node:
 		"""
 		self._nodetype = nodetype
 
-	def getDifference(self, _node):
+	def getDistanceFromNode(self, _node):
 		"""
-		Get difference distance from the other node
-
+		Get how far of distance from the other node
 		Return
 		    Difference of distance between node
 		"""
@@ -74,7 +68,6 @@ class Node:
 	def __lt__(self, _node):
 		"""
 		Check this node have energy less than the other node
-
 		Args:
 			_node (Node): The other node
 		Return
@@ -85,7 +78,6 @@ class Node:
 	def __le__(self, _node):
 		"""
 		Check this node have energy less than or equal the other node
-
 		Args:
 			_node (Node): The other node
 		Return
@@ -96,7 +88,6 @@ class Node:
 	def __eq__(self, _node):
 		"""
 		Check this node have energy equal the other node
-
 		Args:
 			_node (Node): The other node
 		Return
@@ -107,7 +98,6 @@ class Node:
 	def __ne__(self, _node):
 		"""
 		Check this node have energy not equal the other node
-
 		Args:
 			_node (Node): The other node
 		Return
@@ -118,7 +108,6 @@ class Node:
 	def __gt__(self, _node):
 		"""
 		Check this node have energy greater than the other node
-
 		Args:
 			_node (Node): The other node
 		Return
@@ -129,7 +118,6 @@ class Node:
 	def __ge__(self, _node):
 		"""
 		Check this node have energy greater than or equal the other node
-
 		Args:
 			_node (Node): The other node
 		Return
