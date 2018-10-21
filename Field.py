@@ -25,21 +25,31 @@ class Field:
         self._start_energy = start_energy
         self.nodeList = []
         self.nodeCH = []
+
+        self.createNode(-50, 50, 'BS')
         for _ in range(int(self._density * self._size**2)):
             self.createNode(rand.random() * size, rand.random() * size)
+
+    def getSize(self):
+        """
+        Get size of field
+        Return
+            Size of field (int)
+        """
+        return self._size
     
-    def createNode(self, x, y):
+    def createNode(self, x, y, nodetype='CM'):
         """
         Create new nodes
         and store it in list which have 3 element
         First element: Node
-        Second element: Type node
-        Third element: Delay
+        Second element: Delay
         Args:
-            x (float): Position x of new node
-            y (float): Position y of new node
+            x      (float): Position x of new node
+            y      (float): Position y of new node
+            nodetype (str): Node type
         """
-        self.nodeList.append([Node(x, y, energy=self._start_energy + 0.01 * rand.random() * (1 if rand.random() < 0.5 else - 1)), 'CM', 0])
+        self.nodeList.append([Node(x, y, energy=self._start_energy + 0.01 * rand.random() * (1 if rand.random() < 0.5 else - 1), nodetype=nodetype), 0])
 
     def getNodes(self, nodetype='none'):
         """
@@ -49,7 +59,7 @@ class Field:
         Return
             List of nodes in field
         """
-        nodeList = self.nodeList
+        nodeList = self.nodeList[1:]
         if nodetype != 'none':
             return list(filter(lambda x: x[0].getType() == nodetype, nodeList))
         return nodeList
@@ -102,7 +112,6 @@ class Field:
         for index in range(len(nodeList)):
             rand_num = rand.random()
             if rand_num < prob / 100:
-                nodeList[index][1] = 'CH'
                 node = nodeList[index][0]
                 node.setType('CH')
                 self.nodeCH.append(node)
@@ -120,9 +129,10 @@ class Field:
             if node[0].getType() == 'CH':
                 x_ch.append(node[0].getX())
                 y_ch.append(node[0].getY())
-            else:
+            elif node[0].getType() != 'BS':
                 x_cm.append(node[0].getX())
                 y_cm.append(node[0].getY())
+        plt.scatter([-50], [50], label='BS', marker=mark.MarkerStyle('o', fillstyle='full'))
         plt.scatter(x_cm, y_cm, label='CM', marker=mark.MarkerStyle('.', fillstyle='full'))
         plt.scatter(x_ch, y_ch, label='CH', marker=mark.MarkerStyle(',', fillstyle='full'))
         plt.xlabel('X')
