@@ -56,6 +56,7 @@ def CH_competition_phase(field, radius):
                 node[0].setType('CH')
                 count += 1
     print("# Amount of Claster Header in Phase 2 =", count)
+    print(CCH_nodeList)
 
 
 def cluster_announcement_phase(field, radius):
