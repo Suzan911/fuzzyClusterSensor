@@ -2,7 +2,8 @@
 For running algorithm
 """
 import math
-import random as rand
+import time as _time
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.markers as mark
 from Field import Field
@@ -21,7 +22,7 @@ def CCH_election_phase(field, t):
     """
     nodeList, count = field.getNodes(), 0
     for i in range(len(nodeList)):
-        if rand.random() <= t / 100:
+        if np.random.rand() <= t / 100:
             nodeList[i][0].setType('CCH')
             # Exploit : In first round, every node have same amount of energy how we decide which one to be CCH
             # Solution: Define starting node that be implant at initial energy +- 0.01
@@ -97,16 +98,32 @@ def cluster_announcement_phase(field, radius):
                 node[0].setPointerNode(CH_node[0])
                 CH_node[0].setPointerNode(node[0])
 
-    for node in CH_nodeList:
-        for member in node[0].getPointerNode():
-            plt.plot([node[0].getX(), member.getX()], [node[0].getY(), member.getY()], 'r,-')
-
 def cluster_association_phase(field):
     """
     Phase 4
     Cluster Association Phase
+
+    Cluster Members (CM) has to join or associate with the closest Cluster Header (CH)
+    and send the packet which contains the residual energy value of that CM to the selected CH
+
+    Cluster Header find the size of themselves by find the maximum distance between it and other CM
+    and calculate average of residual energy of CM that associate with itself
+    
+    Args:
+        field (Field): Field
     """
-    pass
+    CH_nodeList = field.getNodes('CH')
+
+    # Find the size for each Cluster Header
+    for node in field.getNodes('CH'):
+        #print(node[0].getPosition())
+        #print(node[0].updateSize())
+        node[0].updateSize()
+    
+    # Plot graph to simulate environments
+    for node in field.getNodes('CH'):
+        for member in node[0].getPointerNode():
+            plt.plot([node[0].getX(), member.getX()], [node[0].getY(), member.getY()], color='r', alpha=0.7, linewidth=1)
 
 def cluster_confirmation_phase(field):
     """
@@ -117,9 +134,18 @@ def cluster_confirmation_phase(field):
 
 # This is main
 if __name__ == "__main__":
-    field = Field(100, 0.0125)
-    CCH_election_phase(field, 20)
-    CH_competition_phase(field, 10)
-    cluster_announcement_phase(field, 10)
-    field.printField()
+    start_time = _time.time()
+    loop = int(input('Amount of loop : '))
+    for time in range(1, loop + 1):
+        print('Testcase', time)
+        field = Field(100, 0.0125)
+        CCH_election_phase(field, 20)
+        CH_competition_phase(field, 10)
+        cluster_announcement_phase(field, 10)
+        cluster_association_phase(field)
+        field.printField(time)
+        del field
+        print()
+    print("---------- END OF EXECUTION ----------")
+    print("-- Using %s seconds --" % (_time.time() - start_time))
 

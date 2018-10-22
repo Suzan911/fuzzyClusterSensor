@@ -12,6 +12,8 @@ class Node:
             x (float): Position x
             y (float): Position y
             energy (float): Energy
+            nodetype (str): Node type
+            name (str): Name of node   # Not used
         """
         self.__x = x
         self.__y = y
@@ -19,6 +21,15 @@ class Node:
         self.__nodetype = nodetype
         self.__name = name
         self.__pointerNode = []
+        self.__size = 0
+
+    def getPosition(self):
+        """
+        Get positions of node
+        Return
+            Tuple of position of node (x, y)
+        """
+        return self.__x, self.__y
 
     def getX(self):
         """
@@ -57,6 +68,28 @@ class Node:
         Set node to new type
         """
         self.__nodetype = nodetype
+
+    def getSize(self):
+        """
+        Get size of node if this node is Cluster Header (CH)
+        otherwise return 0
+        Return
+            size (float): Size of node
+        """
+        return self.__size if self.getType() == 'CH' else 0
+
+    def updateSize(self):
+        """
+        Update size of node if this node is Cluster Node
+        otherwise return 0
+        Return
+            size (float): Size of node
+        """
+        size = 0
+        if self.getType() == 'CH' and self.hasPointerNode():
+            size = max(list(map(lambda x: self.getDistanceFromNode(x), self.getPointerNode())))
+            self.__size = size
+        return size
 
     def getDistanceFromNode(self, node):
         """
