@@ -1,9 +1,10 @@
 """
 For declare field class
 """
-import random as rand
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.markers as mark
+import matplotlib.patches as patches
 from Node import Node
 
 class Field:
@@ -28,7 +29,7 @@ class Field:
 
         self.createNode(-50, 50, 'BS')
         for _ in range(int(self._density * self._size**2)):
-            self.createNode(rand.random() * size, rand.random() * size)
+            self.createNode(np.random.rand() * size, np.random.rand() * size)
 
     def getSize(self):
         """
@@ -49,7 +50,7 @@ class Field:
             y      (float): Position y of new node
             nodetype (str): Node type
         """
-        self.nodeList.append([Node(x, y, energy=self._start_energy + 0.01 * rand.random() * (1 if rand.random() < 0.5 else - 1), nodetype=nodetype), 0])
+        self.nodeList.append([Node(x, y, energy=self._start_energy + 0.01 * np.random.rand() * (1 if np.random.rand() < 0.5 else - 1), nodetype=nodetype), 0])
 
     def getNodes(self, nodetype='none'):
         """
@@ -110,7 +111,7 @@ class Field:
         nodeList = self.getNodes()
         count = 0
         for index in range(len(nodeList)):
-            rand_num = rand.random()
+            rand_num = np.random.rand()
             if rand_num < prob / 100:
                 node = nodeList[index][0]
                 node.setType('CH')
@@ -119,9 +120,13 @@ class Field:
         self.nodeList = nodeList
         print("# Amount of Claster Header from 1st re-clustering = ", count)
 
-    def printField(self):
+    def printField(self, pic_id=0, showplot=0):
         """
         Plot field
+
+        Args:
+            pic_id (int): Save image id
+            showplot (bool): Show plot graph
         """
         x_cm, y_cm, x_ch, y_ch, i = [], [], [], [], 0
         for node in self.getNodes():
@@ -132,14 +137,19 @@ class Field:
             elif node[0].getType() != 'BS':
                 x_cm.append(node[0].getX())
                 y_cm.append(node[0].getY())
-        plt.scatter([-50], [50], label='BS', marker=mark.MarkerStyle('o', fillstyle='full'))
-        plt.scatter(x_cm, y_cm, label='CM', marker=mark.MarkerStyle('.', fillstyle='full'))
-        plt.scatter(x_ch, y_ch, label='CH', marker=mark.MarkerStyle(',', fillstyle='full'))
+        plt.scatter([-50], [50], s=35, label='BS', marker=mark.MarkerStyle('o', fillstyle='full'))
+        plt.scatter(x_cm, y_cm, s=18, label='CM', marker=mark.MarkerStyle('.', fillstyle='full'))
+        plt.scatter(x_ch, y_ch, s=20, label='CH', marker=mark.MarkerStyle(',', fillstyle='full'))
+        plt.gca().add_patch(patches.Rectangle((0, 0), self.getSize(), self.getSize(), linewidth='1', linestyle='-', facecolor='none', edgecolor='k'))
         plt.xlabel('X')
         plt.ylabel('Y')
         plt.title("Field")
-        plt.legend()
-        plt.show()
+        plt.legend(loc=0)
+        if pic_id:
+            plt.savefig('sample_case/%04d' % pic_id, dpi=300)
+        if showplot:
+            plt.show()
+        plt.clf()
 
     def run(self):
         """

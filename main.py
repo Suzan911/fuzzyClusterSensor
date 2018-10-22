@@ -2,7 +2,8 @@
 For running algorithm
 """
 import math
-import random as rand
+import time as _time
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.markers as mark
 from Field import Field
@@ -21,7 +22,7 @@ def CCH_election_phase(field, t):
     """
     nodeList, count = field.getNodes(), 0
     for i in range(len(nodeList)):
-        if rand.random() <= t / 100:
+        if np.random.rand() <= t / 100:
             nodeList[i][0].setType('CCH')
             # Exploit : In first round, every node have same amount of energy how we decide which one to be CCH
             # Solution: Define starting node that be implant at initial energy +- 0.01
@@ -121,7 +122,7 @@ def cluster_association_phase(field):
     # Plot graph to simulate environments
     for node in field.getNodes('CH'):
         for member in node[0].getPointerNode():
-            plt.plot([node[0].getX(), member.getX()], [node[0].getY(), member.getY()], 'r,-')
+            plt.plot([node[0].getX(), member.getX()], [node[0].getY(), member.getY()], color='r', alpha=0.7, linewidth=1)
 
 def cluster_confirmation_phase(field):
     """
@@ -132,10 +133,18 @@ def cluster_confirmation_phase(field):
 
 # This is main
 if __name__ == "__main__":
-    field = Field(100, 0.0125)
-    CCH_election_phase(field, 20)
-    CH_competition_phase(field, 10)
-    cluster_announcement_phase(field, 10)
-    cluster_association_phase(field)
-    field.printField()
+    start_time = _time.time()
+    loop = int(input('Amount of loop : '))
+    for time in range(1, loop + 1):
+        print('Testcase', time)
+        field = Field(100, 0.0125)
+        CCH_election_phase(field, 20)
+        CH_competition_phase(field, 10)
+        cluster_announcement_phase(field, 10)
+        cluster_association_phase(field)
+        field.printField(time)
+        del field
+        print()
+    print("---------- END OF EXECUTION ----------")
+    print("-- Using %s seconds --" % (_time.time() - start_time))
 
