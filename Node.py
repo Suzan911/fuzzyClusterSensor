@@ -5,7 +5,7 @@ class Node:
     """
     Object Node
     """
-    def __init__(self, x=0, y=0, energy=10, nodetype='CM', name='node'):
+    def __init__(self, x=0, y=0, energy=3, nodetype='CM', name='node'):
         """
         Initial variables for new node
         Args:
@@ -103,11 +103,19 @@ class Node:
 
     def getPointerNode(self):
         """
-        Get pointer to some node that should be a header of this node
+        Get pointer to some node that should be a header of this node (if CM)
+        or get a list of CM that pointer to this node (if CH)
         Return
-            Header of this node
+            Header of this node or list of CM
         """
-        return self.__pointerNode
+        if self.getType() != 'CH':
+            if len(self.__pointerNode) > 0:
+                pointer = self.__pointerNode[0]
+            else:
+                pointer = self.__pointerNode
+        else:
+            pointer = self.__pointerNode
+        return pointer
 
     def setPointerNode(self, node):
         """
@@ -134,6 +142,75 @@ class Node:
             node (Node): Node that want to switch
         """
         self.__pointerNode.remove(node)
+
+    def clearPointerNode(self):
+        """
+        Clear pointer node
+        """
+        self.__pointerNode.clear()
+    
+    def setEnergy(self, energy):
+        """
+        Set energy to this node
+        Args:
+            energy (float): Energy of this node
+        """
+        self.__energy = energy
+    """
+    Sections Energy consumption
+
+    Variables define
+        eagg = 5*(10**(-9))             # (nJ/bit/signal) Energy dissipation for data aggergation
+        dzero = 87                      # Distance which we swap to the others equation of energy loss
+        ld = 4000                       # Length of data packet
+        eelec = 50*(10**(-9))           # Energy dissipation of transmitter & receiver electronics
+        efs = 10**-12                   # Energy dissipation of transmitter amplifier in Friis free space
+        emp = 0.0013*(10**-(12))        # Energy dissipation of data aggregation
+    """
+
+    def consume_receive(self):
+        """
+        Erx is the energy used by a sensor to receive
+        a data packet of >Ld< bit size and >Eelec< is the
+        constant factor of energy in transmitter and receiver
+        circuitry
+        """
+        eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics
+        ld = 4000
+        return eelec*ld
+
+    def consume_transmit(self, d):
+        """
+        Energy used by a sensor to transmit >Ld< Bit
+        of data packet over a distance d. if d is less then
+        the threshold distance, d0, we ues terms of >Efs< as
+        the constant factors of energy in a free-space conmdition.
+        when d is greter thne or equal to d0, we use terms of >Emp<
+        for a multi-path fading condition.
+        Args:
+            d (float): Distance
+        """
+        eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics
+        ld = 4000 #Length of data packet
+        efs = 10**-12   #Energy dissipation of transmitter amplifier in Friis free space
+        emp = 0.0013*(10**-(12)) #Energy dissipation of data aggregation
+        dzero = 87
+        if d < dzero:
+            energy = ld * (eelec + efs * d**2)
+        else:
+            energy= ld * (eelec + emp * d**4)
+        return energy
+
+    def consume_Eproc(self, amount_nodes):
+        """
+        It depends on size of total numder of bit >Lt< that
+        the CH received from all CMs and form itself and >Eagg< 
+        which is the energy costant for data aggergation
+        """
+        ld = 4000 #Length of data packet
+        eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics
+        energy = ld * amount_nodes * eelec
+        return energy
 
     def __lt__(self, _node):
         """

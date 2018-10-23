@@ -11,7 +11,7 @@ class Field:
     """
     Object Field
     """
-    def __init__(self, size=1, density=0, start_energy=3, r=0):
+    def __init__(self, size=1, density=0, start_energy=0.1, r=0):
         """
         Initial variable for new field
         Args:
@@ -38,11 +38,19 @@ class Field:
             Size of field (int)
         """
         return self._size
+
+    def getDensity(self):
+        """
+        Get node density of field
+        Return
+            Node density of field
+        """
+        return self._density
     
     def createNode(self, x, y, nodetype='CM'):
         """
         Create new nodes
-        and store it in list which have 3 element
+        and store it in list which have 2 element
         First element: Node
         Second element: Delay
         Args:
@@ -51,6 +59,22 @@ class Field:
             nodetype (str): Node type
         """
         self.nodeList.append([Node(x, y, energy=self._start_energy + 0.01 * np.random.rand() * (1 if np.random.rand() < 0.5 else - 1), nodetype=nodetype), 0])
+
+    def deleteNode(self, node):
+        """
+        Delete node from field
+        Args:
+            node (Node): Node that will be removed
+        """
+        self.nodeList.remove([node, 0])
+
+    def getBaseStation(self):
+        """
+        Get Base station node
+        Return
+            Base station node
+        """
+        return self.nodeList[0][0]
 
     def getNodes(self, nodetype='none'):
         """
@@ -77,7 +101,6 @@ class Field:
         """
         nearbyNodes = list(filter(lambda x: node.getDistanceFromNode(x[0]) <= radius and node != x[0], self.getNodes(nodetype)))
         return nearbyNodes
-
 
     def updateNodes(self, nodeList):
         """
@@ -119,6 +142,17 @@ class Field:
                 count += 1
         self.nodeList = nodeList
         print("# Amount of Claster Header from 1st re-clustering = ", count)
+
+    def resetNode(self):
+        """
+        Reset node status
+        """
+        nodeList = self.getNodes()
+        for node in nodeList:
+            node = node[0]
+            node.setType('CM')
+            node.clearPointerNode()
+        plt.clf()
 
     def printField(self, pic_id=0, showplot=0):
         """

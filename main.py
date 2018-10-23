@@ -77,23 +77,23 @@ def cluster_announcement_phase(field, radius):
             if not nearbyNode[0].hasPointerNode():
                 node[0].setPointerNode(nearbyNode[0])
                 nearbyNode[0].setPointerNode(node[0])
-            elif nearbyNode[0].getPointerNode()[0].getDistanceFromNode(nearbyNode[0]) > node[0].getDistanceFromNode(nearbyNode[0]):
-                nearbyNode[0].getPointerNode()[0].removePointerNode(nearbyNode[0])
+            elif nearbyNode[0].getPointerNode().getDistanceFromNode(nearbyNode[0]) > node[0].getDistanceFromNode(nearbyNode[0]):
+                nearbyNode[0].getPointerNode().removePointerNode(nearbyNode[0])
                 node[0].setPointerNode(nearbyNode[0])
                 nearbyNode[0].setPointerNode(node[0])
 
     # In case; CM can't find any CH node nearby, so we need to brute force it
     # Find CH node in length of diagonal of area radius
     left_CM_node = list(filter(lambda x: not x[0].hasPointerNode(), field.getNodes('CM')))
-    print("# CM node left in phase 3 :", len(left_CM_node))
+    print("# CM node which can't associate with CH node in phase 3 :", len(left_CM_node))
     for node in left_CM_node:
         diagonal_length = (field.getSize()**2 + field.getSize()**2)**0.5
         for CH_node in field.getNearbyNodes(node[0], diagonal_length, 'CH'):
             if not node[0].hasPointerNode():
                 node[0].setPointerNode(CH_node[0])
                 CH_node[0].setPointerNode(node[0])
-            elif node[0].getPointerNode()[0].getDistanceFromNode(node[0]) > node[0].getDistanceFromNode(CH_node[0]):
-                node[0].getPointerNode()[0].removePointerNode(node[0])
+            elif node[0].getPointerNode().getDistanceFromNode(node[0]) > node[0].getDistanceFromNode(CH_node[0]):
+                node[0].getPointerNode().removePointerNode(node[0])
                 node[0].setPointerNode(CH_node[0])
                 CH_node[0].setPointerNode(node[0])
 
@@ -118,33 +118,77 @@ def cluster_association_phase(field):
         #print(node[0].getPosition())
         #print(node[0].updateSize())
         node[0].updateSize()
-    
+
+    print("# Node left in field (assume that we finish):", len(field.getNodes()))
     # Plot graph to simulate environments
     for node in field.getNodes('CH'):
         for member in node[0].getPointerNode():
-            plt.plot([node[0].getX(), member.getX()], [node[0].getY(), member.getY()], color='r', alpha=0.7, linewidth=1)
+            plt.plot([node[0].getX(), member.getX()], [node[0].getY(), member.getY()], color='r', alpha=0.7, linewidth=0.8)
+
+    # Assume that we finish all phase and all node will consume energy
+    nodeList, count = field.getNodes(), 0
+    for i in range(len(nodeList)):
+        nodeList[i][1] = 0 # delay
+    
+    for node in field.getNodes():
+        node = node[0]
+        if node.getType() == 'CH':
+            # Energy consumptions at CH node
+            size = len(node.getPointerNode())
+            consume_energy = node.consume_receive() * size + \
+                             node.consume_Eproc(len(node.getPointerNode())) + \
+                             node.consume_transmit(node.getDistanceFromNode(field.getBaseStation()))
+        elif node.getType() == 'CM':
+            # Energy consumptions at CM node
+            if node.getPointerNode():
+                distance = node.getDistanceFromNode(node.getPointerNode())
+            else:
+                distance = node.getDistanceFromNode(field.getBaseStation())
+            consume_energy = node.consume_transmit(distance)
+        node.setEnergy(node.getEnergy() - consume_energy)
+        if node.getEnergy() <= 0:
+            field.deleteNode(node)
+            del node
 
 def cluster_confirmation_phase(field):
     """
     Phase 5
     Cluster Confirmation Phase
+
+    Not started yet. Just note that is to-do list
     """
     pass
 
 # This is main
 if __name__ == "__main__":
     start_time = _time.time()
-    loop = int(input('Amount of loop : '))
-    for time in range(1, loop + 1):
+    start_loop = int(input('Start loop: '))
+    final_loop = int(input('Final loop: '))
+    for time in range(start_loop, final_loop + 1):
         print('Testcase', time)
         field = Field(100, 0.0125)
-        CCH_election_phase(field, 20)
-        CH_competition_phase(field, 10)
-        cluster_announcement_phase(field, 10)
-        cluster_association_phase(field)
-        field.printField(time)
-        del field
+        left_node = []
+        try:
+            while len(field.getNodes()) > 0:
+                print('\nRound:', len(left_node) + 1)
+                CCH_election_phase(field, 20)
+                CH_competition_phase(field, 10)
+                cluster_announcement_phase(field, 10)
+                cluster_association_phase(field)
+                #field.printField(pic_id=0, showplot=1)
+                left_node.append(len(field.getNodes()))
+                field.resetNode()
+        except:
+            print("Something error --")
         print()
+        plt.plot([0] + list(range(1, len(left_node) + 1)), [int(field.getDensity() * int(field.getSize())**2)] + left_node)
+        plt.xlabel('Round')
+        plt.ylabel('Node')
+        plt.title("Node left per round")
+        #plt.show()
+        plt.savefig('sample_case_proc/%04d' % pic_id, dpi=300)
+        plt.clf()
+        del field
+        print("------- END OF Testcase %d -------" % time)
     print("---------- END OF EXECUTION ----------")
     print("-- Using %s seconds --" % (_time.time() - start_time))
-
