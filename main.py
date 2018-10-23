@@ -164,8 +164,8 @@ if __name__ == "__main__":
     start_time = _time.time()
     start_loop = int(input('Start loop: '))
     final_loop = int(input('Final loop: '))
-    for time in range(start_loop, final_loop + 1):
-        print('Testcase', time)
+    for tc in range(start_loop, final_loop + 1):
+        print('Testcase', tc)
         field = Field(100, 0.0125)
         left_node = []
         try:
@@ -186,7 +186,7 @@ if __name__ == "__main__":
         plt.ylabel('Node')
         plt.title("Node left per round")
         #plt.show()
-        plt.savefig('sample_case_proc/%04d' % pic_id, dpi=300)
+        plt.savefig('sample_case_proc/%04d' % tc, dpi=300)
         plt.clf()
         del field
         print("------- END OF Testcase %d -------" % time)
