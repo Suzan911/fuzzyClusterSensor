@@ -11,7 +11,7 @@ class Field:
     """
     Object Field
     """
-    def __init__(self, size=1, density=0, start_energy=0.1, r=0):
+    def __init__(self, size=1, density=0, start_energy=3, r=0):
         """
         Initial variable for new field
         Args:
@@ -46,7 +46,7 @@ class Field:
             Node density of field
         """
         return self._density
-    
+
     def createNode(self, x, y, nodetype='CM'):
         """
         Create new nodes

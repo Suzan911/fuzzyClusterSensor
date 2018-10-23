@@ -2,6 +2,7 @@
 For running algorithm
 """
 import math
+import os
 import time as _time
 import numpy as np
 import matplotlib.pyplot as plt
@@ -166,8 +167,8 @@ if __name__ == "__main__":
     final_loop = int(input('Final loop: '))
     for tc in range(start_loop, final_loop + 1):
         print('Testcase', tc)
-        field = Field(100, 0.0125)
-        left_node = []
+        field = Field(100, 0.0125, start_energy=3)
+        left_node = [int(field.getDensity() * int(field.getSize())**2)]
         try:
             while len(field.getNodes()) > 0:
                 print('\nRound:', len(left_node) + 1)
@@ -181,14 +182,27 @@ if __name__ == "__main__":
         except:
             print("Something error --")
         print()
-        plt.plot([0] + list(range(1, len(left_node) + 1)), [int(field.getDensity() * int(field.getSize())**2)] + left_node)
+        # Save graph
+        plt.plot(list(range(len(left_node) + 1)), left_node)
         plt.xlabel('Round')
         plt.ylabel('Node')
         plt.title("Node left per round")
-        #plt.show()
+        # plt.show()
         plt.savefig('sample_case_proc/%04d' % tc, dpi=300)
         plt.clf()
+        # Save File
+        try:
+            path_o = "sample_case_proc/%04d.txt" % (tc)
+            print(path_o)
+            f_o = open(os.path.join(path_o), "w+")
+            f_o.writelines("\n".join(list(map(str, left_node))))
+            f_o.close()
+
+            print("Save I/O Complete")
+        except:
+            print("Save I/O Error")
+
         del field
-        print("------- END OF Testcase %d -------" % time)
+        print("------- END OF Testcase %d -------" % tc)
     print("---------- END OF EXECUTION ----------")
     print("-- Using %s seconds --" % (_time.time() - start_time))
