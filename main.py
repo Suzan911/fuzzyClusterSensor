@@ -183,7 +183,7 @@ if __name__ == "__main__":
             print("Something error --")
         print()
         # Save graph
-        plt.plot(list(range(len(left_node) + 1)), left_node)
+        plt.plot(list(range(len(left_node))), left_node)
         plt.xlabel('Round')
         plt.ylabel('Node')
         plt.title("Node left per round")
