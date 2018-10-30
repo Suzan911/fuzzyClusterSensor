@@ -5,7 +5,7 @@ class Node:
     """
     Object Node
     """
-    def __init__(self, x=0, y=0, energy=3, nodetype='CM', name='node'):
+    def __init__(self, x=0, y=0, energy=3, nodetype='CM', name='node', delay=0, t=0.2):
         """
         Initial variables for new node
         Args:
@@ -22,6 +22,8 @@ class Node:
         self.__name = name
         self.__pointerNode = []
         self.__size = 0
+        self.__t = t
+        self.__delay = delay
 
     def getPosition(self):
         """
@@ -77,6 +79,38 @@ class Node:
             size (float): Size of node
         """
         return self.__size if self.getType() == 'CH' else 0
+
+    def getDelay(self):
+        """
+        Get delay
+        Return
+            delay (float): Delay of node
+        """
+        return self.__delay
+
+    def getT(self):
+        """
+        Get T
+        Return
+            t (float): T Chance
+        """
+        return self.__t
+
+    def setDelay(self, delay):
+        """
+        Set delay of node
+        Args:
+            delay (float): Delay of node
+        """
+        self.__delay = delay
+
+    def setT(self, t):
+        """
+        Set T
+        Args:
+            t (float): T Change
+        """
+        self.__t = t
 
     def updateSize(self):
         """
