@@ -5,7 +5,7 @@ class Node:
     """
     Object Node
     """
-    def __init__(self, x=0, y=0, energy=3, nodetype='CM', name='node', delay=0, t=0.2):
+    def __init__(self, x=0, y=0, energy=3, nodetype='CM', name='node', delay=0, t=0.2, state='active'):
         """
         Initial variables for new node
         Args:
@@ -26,6 +26,7 @@ class Node:
         self.__size = 0
         self.__t = t
         self.__delay = delay
+        self.__state = state
 
         """
         Use to stored average residual energy if this node is CH
@@ -73,11 +74,13 @@ class Node:
         """
         return self.__nodetype
 
-    def setType(self, nodetype):
+    def getState(self):
         """
-        Set node to new type
+        Get state of node
+        Return
+            Action or Sleep
         """
-        self.__nodetype = nodetype
+        return self.__state
 
     def getSize(self):
         """
@@ -103,6 +106,18 @@ class Node:
             t (float): T Chance
         """
         return self.__t
+
+    def setType(self, nodetype):
+        """
+        Set node to new type
+        """
+        self.__nodetype = nodetype
+
+    def setState(self, state):
+        """
+        Set state of node
+        """
+        self.__state = state
 
     def setDelay(self, delay):
         """
@@ -227,8 +242,9 @@ class Node:
         size = self.getSize()
         member_list = self.getPointerNode()
         residual_energy = self.getResidualEnergy()
-        self.__energy_CM_avg = residual_energy / len(member_list)
-        self.__energy_all_avg = (residual_energy + node.getEnergy()) / (len(member_list) + 1)
+        if len(member_list):
+            self.__energy_CM_avg = residual_energy / len(member_list)
+            self.__energy_all_avg = (residual_energy + self.getEnergy()) / (len(member_list) + 1)
     
     def getAverageCM_energy(self):
         return self.__energy_CM_avg
@@ -256,7 +272,7 @@ class Node:
         """
         eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics
         ld = 4000
-        self.setEnergy(self.__Energy - eelec*ld)
+        self.setEnergy(self.getEnergy() - eelec*ld)
 
     def consume_transmit(self, d):
         """
@@ -278,7 +294,7 @@ class Node:
             energy = ld * (eelec + efs * d**2)
         else:
             energy= ld * (eelec + emp * d**4)
-        self.setEnergy(self.__Energy - energy)
+        self.setEnergy(self.getEnergy() - energy)
 
     def consume_Eproc(self, amount_nodes):
         """
@@ -289,4 +305,4 @@ class Node:
         ld = 4000 #Length of data packet
         eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics
         energy = ld * amount_nodes * eelec
-        self.setEnergy(self.__Energy - energy)
+        self.setEnergy(self.getEnergy() - energy)

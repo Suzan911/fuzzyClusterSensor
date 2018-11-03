@@ -11,7 +11,7 @@ class Field:
     """
     Object Field
     """
-    def __init__(self, size=1, density=0, start_energy=3, r=0, t=0.2):
+    def __init__(self, size=1, density=0, radius=30, start_energy=3, r=0, t=0.2):
         """
         Initial variable for new field
         Args:
@@ -22,6 +22,7 @@ class Field:
         """
         self._size = size
         self._density = density
+        self._radius = radius
         self._round = r
         self._t = t
         self._start_energy = start_energy
@@ -47,6 +48,14 @@ class Field:
             Node density of field
         """
         return self._density
+
+    def getRadius(self):
+        """
+        Get node find radius in field
+        Return
+            Radius
+        """
+        return self._radius
 
     def createNode(self, x, y, nodetype='CM', t=0.2):
         """

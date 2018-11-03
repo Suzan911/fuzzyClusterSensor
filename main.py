@@ -24,6 +24,7 @@ def CCH_election_phase(field, t):
     nodeList, count = field.getNodes(), 0
     for node in nodeList:
         node.setDelay(0)
+        node.setState('active')
         if np.random.rand() <= node.getT():
             node.setType('CCH')
             # Exploit : In first round, every node have same amount of energy how we decide which one to be CCH
@@ -55,7 +56,7 @@ def CH_competition_phase(field, radius):
             for nearbyNode in field.getNearbyNodes(node, radius, 'CCH'):
                 # Consume Energy to receiving a packet
                 nearbyNode.consume_receive()
-                if nearbyNode > node:
+                if nearbyNode.getEnergy() > node.getEnergy():
                     node.setType('CM')
                     break
                 else:
@@ -128,10 +129,11 @@ def cluster_association_phase(field):
     """
     CH_nodeList = field.getNodes('CH')
 
-    for members in field.getNode('CM'):
-        CH_pointer = members.getPointerNode()
-        members.consume_transmit(members.getDistanceFromNode(CH_pointer))
-        CH_pointer.consume_receive()
+    for member in field.getNodes('CM'):
+        CH_pointer = member.getPointerNode()
+        if CH_pointer:
+            member.consume_transmit(member.getDistanceFromNode(CH_pointer))
+            CH_pointer.consume_receive()
 
     # Find the size and average energy for each Cluster Header
     for node in field.getNodes('CH'):
@@ -160,11 +162,11 @@ def cluster_confirmation_phase(field):
         # Energy consumptions at CH node
         # Create packet and sending to all CM which pointer to itself
         members = node.getPointerNode()
-        for member in merbers:
+        for member in members:
             node.consume_transmit(node.getDistanceFromNode(member))
             member.consume_receive()
             # Cluster member adjust T-value (Fuzzy Algorithm)
-            adjustment_T_value(node)
+            adjustment_T_value(field, node)
 
         # Cluster Header
         size = node.getSize()
@@ -173,26 +175,36 @@ def cluster_confirmation_phase(field):
         avg_CM_energy = node.getAverageCM_energy()
         avg_energy = node.getAverageAll_energy()
         # Cluster Header adjust T-value (Fuzzy Algorithm)
-        adjustment_T_value(node)
+        adjustment_T_value(field, node)
 
-        node.consume_Eproc()
+        node.consume_Eproc(len(member_list))
 
         if node.getEnergy() <= 0:
             field.deleteNode(node)
             del node
 
 
-def adjustment_T_value(node):
+def adjustment_T_value(field, node):
     """
     T-Value adjustment
+
     """
-    pass
+    # This is crisp adjustment
+    radius = field.getRadius()
+    if node.getSize() > radius:
+        node.setT(node.getT() * 1.01)
+    elif node.getSize() < radius:
+        node.setT(node.getT() * 0.99)
+
+    # To-do Fuzzy here
+    # ...
 
 
 # This is main
 if __name__ == "__main__":
     start_loop = int(input('Start loop: '))
     final_loop = int(input('Final loop: '))
+    field_radius = int(input('Init Radius: '))
     start_time = _time.time()
     for tc in range(start_loop, final_loop + 1):
         print('Testcase', tc)
@@ -200,14 +212,14 @@ if __name__ == "__main__":
         if not os.path.isdir("sample_case_proc/%04d" % tc):
             os.mkdir("sample_case_proc/%04d" % tc)
 
-        field = Field(100, 0.0125, start_energy=3, t=0.2)
+        field = Field(100, 0.0125, radius=field_radius, start_energy=3, t=0.2)
         left_node = [int(field.getDensity() * int(field.getSize())**2)]
 
         while len(field.getNodes()) > 0:
             print('\nRound:', len(left_node) + 1)
             CCH_election_phase(field, 20)
-            CH_competition_phase(field, 30)
-            cluster_announcement_phase(field, 30)
+            CH_competition_phase(field, field_radius)
+            cluster_announcement_phase(field, field_radius)
             field.printField(pic_id=0, r=len(left_node), showplot=0)
             left_node.append(len(field.getNodes()))
             field.resetNode()
