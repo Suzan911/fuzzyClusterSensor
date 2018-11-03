@@ -256,7 +256,7 @@ class Node:
         """
         eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics
         ld = 4000
-        node.setEnergy(node.__Energy - eelec*ld)
+        self.setEnergy(self.__Energy - eelec*ld)
 
     def consume_transmit(self, d):
         """
@@ -278,7 +278,7 @@ class Node:
             energy = ld * (eelec + efs * d**2)
         else:
             energy= ld * (eelec + emp * d**4)
-        node.setEnergy(node.__Energy - energy)
+        self.setEnergy(self.__Energy - energy)
 
     def consume_Eproc(self, amount_nodes):
         """
@@ -289,4 +289,4 @@ class Node:
         ld = 4000 #Length of data packet
         eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics
         energy = ld * amount_nodes * eelec
-        node.setEnergy(node.__Energy - energy)
+        self.setEnergy(self.__Energy - energy)
