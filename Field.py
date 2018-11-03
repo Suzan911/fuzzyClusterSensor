@@ -77,7 +77,7 @@ class Field:
         Args:
             node (Node): Node that will be removed
         """
-        self.nodeList.remove([node, 0])
+        self.nodeList.remove(node)
 
     def getBaseStation(self):
         """
@@ -161,6 +161,8 @@ class Field:
         nodeList = self.getNodes()
         for node in nodeList:
             node.setType('CM')
+            node.setDelay(0)
+            node.setState('active')
             node.clearPointerNode()
         plt.clf()
 

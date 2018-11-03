@@ -23,8 +23,6 @@ def CCH_election_phase(field, t):
     """
     nodeList, count = field.getNodes(), 0
     for node in nodeList:
-        node.setDelay(0)
-        node.setState('active')
         if np.random.rand() <= node.getT():
             node.setType('CCH')
             # Exploit : In first round, every node have same amount of energy how we decide which one to be CCH
@@ -216,17 +214,15 @@ if __name__ == "__main__":
         left_node = [int(field.getDensity() * int(field.getSize())**2)]
 
         while len(field.getNodes()) > 0:
-            print('\nRound:', len(left_node) + 1)
+            print('\nRound:', len(left_node))
             CCH_election_phase(field, 20)
             CH_competition_phase(field, field_radius)
             cluster_announcement_phase(field, field_radius)
-            field.printField(pic_id=0, r=len(left_node), showplot=0)
+            field.printField(pic_id=tc, r=len(left_node), showplot=0)
             left_node.append(len(field.getNodes()))
             field.resetNode()
-
         print()
-        del field
-        '''
+        
         # Save graph
         plt.plot(list(range(len(left_node))), left_node)
         plt.xlabel('Round')
@@ -248,7 +244,7 @@ if __name__ == "__main__":
             print("Save I/O Error")
 
         del field
-        '''
+        
         print("------- END OF Testcase %d -------" % tc)
     print("---------- END OF EXECUTION ----------")
     print("-- Using %s seconds --" % (_time.time() - start_time))
