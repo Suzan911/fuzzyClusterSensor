@@ -2,6 +2,7 @@
 For running algorithm
 """
 import math
+import os
 import time as _time
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,16 +22,18 @@ def CCH_election_phase(field, t):
         t     (float): Probability to promote node to be a Candidate Claster Header (CCH)
     """
     nodeList, count = field.getNodes(), 0
-    for i in range(len(nodeList)):
-        if np.random.rand() <= t / 100:
-            nodeList[i][0].setType('CCH')
+    for node in nodeList:
+        node.setDelay(0)
+        if np.random.rand() <= node.getT():
+            node.setType('CCH')
             # Exploit : In first round, every node have same amount of energy how we decide which one to be CCH
             # Solution: Define starting node that be implant at initial energy +- 0.01
-            nodeList[i][1] = (field.getInitEnergy() - nodeList[i][0].getEnergy()) / field.getInitEnergy() * 10 # delay
+            node.setDelay((field.getInitEnergy() - node.getEnergy()) / field.getInitEnergy() * 10) # delay
             count += 1
-    # We wouldn't update nodes list because it stored it in object
-    #field.updateNodes(nodeList)
+    # We wouldn't update nodes list because it already stored in object
+    # field.updateNodes(nodeList)
     print("# Amount of Candidate Claster Header in Phase 1 =", count)
+
 
 def CH_competition_phase(field, radius):
     """
@@ -44,17 +47,21 @@ def CH_competition_phase(field, radius):
         radius (float): Radius around CCH nodes
     """
     CCH_nodeList, count = field.getNodes('CCH'), 0
-    CCH_nodeList = sorted(field.getNodes('CCH'), key=lambda x: x[1], reverse=False)
+    CCH_nodeList = sorted(field.getNodes('CCH'), key=lambda x: x.getDelay(), reverse=False)
     for node in CCH_nodeList:
-        if node[0].getType() == 'CCH':
-            for nearbyNode in field.getNearbyNodes(node[0], radius, 'CCH'):
-                if nearbyNode[0] > node[0]:
-                    node[0].setType('CM')
+        if node.getType() == 'CCH':
+            # Consume Energy to sending a packet
+            node.consume_transmit(radius)
+            for nearbyNode in field.getNearbyNodes(node, radius, 'CCH'):
+                # Consume Energy to receiving a packet
+                nearbyNode.consume_receive()
+                if nearbyNode > node:
+                    node.setType('CM')
                     break
                 else:
-                    nearbyNode[0].setType('CM')
-            if node[0].getType() == 'CCH':
-                node[0].setType('CH')
+                    nearbyNode.setType('CM')
+            if node.getType() == 'CCH':
+                node.setType('CH')
                 count += 1
     print("# Amount of Claster Header in Phase 2 =", count)
     print(CCH_nodeList)
@@ -74,29 +81,37 @@ def cluster_announcement_phase(field, radius):
     alpha_radius = math.sqrt(2 * math.log(10)) * radius
     CH_nodeList = field.getNodes('CH')
     for node in CH_nodeList:
-        for nearbyNode in field.getNearbyNodes(node[0], alpha_radius, 'CM'):
-            if not nearbyNode[0].hasPointerNode():
-                node[0].setPointerNode(nearbyNode[0])
-                nearbyNode[0].setPointerNode(node[0])
-            elif nearbyNode[0].getPointerNode()[0].getDistanceFromNode(nearbyNode[0]) > node[0].getDistanceFromNode(nearbyNode[0]):
-                nearbyNode[0].getPointerNode()[0].removePointerNode(nearbyNode[0])
-                node[0].setPointerNode(nearbyNode[0])
-                nearbyNode[0].setPointerNode(node[0])
+        # Consume Energy to sending a packet
+        node.consume_transmit(radius)
+        for nearbyNode in field.getNearbyNodes(node, alpha_radius, 'CM'):
+            nearbyNode.consume_receive()
+            if not nearbyNode.hasPointerNode():
+                node.setPointerNode(nearbyNode)
+                nearbyNode.setPointerNode(node)
+            elif nearbyNode.getPointerNode().getDistanceFromNode(nearbyNode) > node.getDistanceFromNode(nearbyNode):
+                nearbyNode.getPointerNode().removePointerNode(nearbyNode)
+                node.setPointerNode(nearbyNode)
+                nearbyNode.setPointerNode(node)
 
-    # In case; CM can't find any CH node nearby, so we need to brute force it
+    cluster_association_phase(field)
+    
+    # In case; CM can't find any CH node nearby, so we need to brute force find CH
     # Find CH node in length of diagonal of area radius
-    left_CM_node = list(filter(lambda x: not x[0].hasPointerNode(), field.getNodes('CM')))
-    print("# CM node left in phase 3 :", len(left_CM_node))
+    '''
+    left_CM_node = list(filter(lambda x: not x.hasPointerNode(), field.getNodes('CM')))
+    print("# CM node which can't associate with CH node in phase 3 =", len(left_CM_node))
     for node in left_CM_node:
         diagonal_length = (field.getSize()**2 + field.getSize()**2)**0.5
-        for CH_node in field.getNearbyNodes(node[0], diagonal_length, 'CH'):
-            if not node[0].hasPointerNode():
-                node[0].setPointerNode(CH_node[0])
-                CH_node[0].setPointerNode(node[0])
-            elif node[0].getPointerNode()[0].getDistanceFromNode(node[0]) > node[0].getDistanceFromNode(CH_node[0]):
-                node[0].getPointerNode()[0].removePointerNode(node[0])
-                node[0].setPointerNode(CH_node[0])
-                CH_node[0].setPointerNode(node[0])
+        for CH_node in field.getNearbyNodes(node, diagonal_length, 'CH'):
+            if not node.hasPointerNode():
+                node.setPointerNode(CH_node)
+                CH_node.setPointerNode(node)
+            elif node.getPointerNode().getDistanceFromNode(node) > node.getDistanceFromNode(CH_node):
+                node.getPointerNode().removePointerNode(node)
+                node.setPointerNode(CH_node)
+                CH_node.setPointerNode(node)
+    ''' # Ignore
+
 
 def cluster_association_phase(field):
     """
@@ -114,38 +129,116 @@ def cluster_association_phase(field):
     """
     CH_nodeList = field.getNodes('CH')
 
-    # Find the size for each Cluster Header
+    for members in field.getNode('CM'):
+        CH_pointer = members.getPointerNode()
+        members.consume_transmit(members.getDistanceFromNode(CH_pointer))
+        CH_pointer.consume_receive()
+
+    # Find the size and average energy for each Cluster Header
     for node in field.getNodes('CH'):
-        #print(node[0].getPosition())
-        #print(node[0].updateSize())
-        node[0].updateSize()
-    
+        node.updateSize()
+        node.computeAverageEnergy()
+
+    print("# Node left in field (assume that we finish):", len(field.getNodes()))
     # Plot graph to simulate environments
     for node in field.getNodes('CH'):
-        for member in node[0].getPointerNode():
-            plt.plot([node[0].getX(), member.getX()], [node[0].getY(), member.getY()], color='r', alpha=0.7, linewidth=1)
+        for member in node.getPointerNode():
+            plt.plot([node.getX(), member.getX()], [node.getY(), member.getY()], color='r', alpha=0.7, linewidth=0.8)
+
+    cluster_confirmation_phase(field)
+
 
 def cluster_confirmation_phase(field):
     """
     Phase 5
     Cluster Confirmation Phase
+
+    All Cluster node will confirm the duty that they would be in a round
+    and so it's should start process by sending data to BaseStation
+    """
+    nodeList, count = field.getNodes(), 0
+    for node in field.getNodes('CH'):
+        # Energy consumptions at CH node
+        # Create packet and sending to all CM which pointer to itself
+        members = node.getPointerNode()
+        for member in merbers:
+            node.consume_transmit(node.getDistanceFromNode(member))
+            member.consume_receive()
+            # Cluster member adjust T-value (Fuzzy Algorithm)
+            adjustment_T_value(node)
+
+        # Cluster Header
+        size = node.getSize()
+        member_list = node.getPointerNode()
+        residual_energy = node.getResidualEnergy()
+        avg_CM_energy = node.getAverageCM_energy()
+        avg_energy = node.getAverageAll_energy()
+        # Cluster Header adjust T-value (Fuzzy Algorithm)
+        adjustment_T_value(node)
+
+        node.consume_Eproc()
+
+        if node.getEnergy() <= 0:
+            field.deleteNode(node)
+            del node
+
+
+def adjustment_T_value(node):
+    """
+    T-Value adjustment
     """
     pass
 
+
 # This is main
 if __name__ == "__main__":
+    start_loop = int(input('Start loop: '))
+    final_loop = int(input('Final loop: '))
     start_time = _time.time()
-    loop = int(input('Amount of loop : '))
-    for time in range(1, loop + 1):
-        print('Testcase', time)
-        field = Field(100, 0.0125)
-        CCH_election_phase(field, 20)
-        CH_competition_phase(field, 10)
-        cluster_announcement_phase(field, 10)
-        cluster_association_phase(field)
-        field.printField(time)
-        del field
+    for tc in range(start_loop, final_loop + 1):
+        print('Testcase', tc)
+
+        if not os.path.isdir("sample_case_proc/%04d" % tc):
+            os.mkdir("sample_case_proc/%04d" % tc)
+
+        field = Field(100, 0.0125, start_energy=3, t=0.2)
+        left_node = [int(field.getDensity() * int(field.getSize())**2)]
+
+        while len(field.getNodes()) > 0:
+            print('\nRound:', len(left_node) + 1)
+            CCH_election_phase(field, 20)
+            CH_competition_phase(field, 30)
+            cluster_announcement_phase(field, 30)
+            field.printField(pic_id=0, r=len(left_node), showplot=0)
+            left_node.append(len(field.getNodes()))
+            field.resetNode()
+
         print()
+        del field
+        '''
+        # Save graph
+        plt.plot(list(range(len(left_node))), left_node)
+        plt.xlabel('Round')
+        plt.ylabel('Node')
+        plt.title("Node left per round")
+        # plt.show()
+        plt.savefig('sample_case_proc/%04d' % tc, dpi=300)
+        plt.clf()
+        # Save File
+        try:
+            path_o = "sample_case_proc/%04d.txt" % (tc)
+            print(path_o)
+            f_o = open(os.path.join(path_o), "w+")
+            f_o.writelines("\n".join(list(map(str, left_node))))
+            f_o.close()
+
+            print("Save I/O Complete")
+        except:
+            print("Save I/O Error")
+
+        del field
+        '''
+        print("------- END OF Testcase %d -------" % tc)
     print("---------- END OF EXECUTION ----------")
     print("-- Using %s seconds --" % (_time.time() - start_time))
 

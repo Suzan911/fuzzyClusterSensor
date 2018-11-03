@@ -11,7 +11,7 @@ class Field:
     """
     Object Field
     """
-    def __init__(self, size=1, density=0, start_energy=3, r=0):
+    def __init__(self, size=1, density=0, start_energy=3, r=0, t=0.2):
         """
         Initial variable for new field
         Args:
@@ -23,13 +23,14 @@ class Field:
         self._size = size
         self._density = density
         self._round = r
+        self._t = t
         self._start_energy = start_energy
         self.nodeList = []
         self.nodeCH = []
 
         self.createNode(-50, 50, 'BS')
         for _ in range(int(self._density * self._size**2)):
-            self.createNode(np.random.rand() * size, np.random.rand() * size)
+            self.createNode(np.random.rand() * size, np.random.rand() * size, 'CM', t=t)
 
     def getSize(self):
         """
@@ -38,31 +39,56 @@ class Field:
             Size of field (int)
         """
         return self._size
-    
-    def createNode(self, x, y, nodetype='CM'):
+
+    def getDensity(self):
+        """
+        Get node density of field
+        Return
+            Node density of field
+        """
+        return self._density
+
+    def createNode(self, x, y, nodetype='CM', t=0.2):
         """
         Create new nodes
-        and store it in list which have 3 element
+        and store it in list which have 2 element
         First element: Node
         Second element: Delay
         Args:
             x      (float): Position x of new node
             y      (float): Position y of new node
             nodetype (str): Node type
+            t      (float): T chance
         """
-        self.nodeList.append([Node(x, y, energy=self._start_energy + 0.01 * np.random.rand() * (1 if np.random.rand() < 0.5 else - 1), nodetype=nodetype), 0])
+        self.nodeList.append(Node(x, y, energy=self._start_energy + 0.01 * np.random.rand() * (1 if np.random.rand() < 0.5 else - 1), nodetype=nodetype, t=t))
+
+    def deleteNode(self, node):
+        """
+        Delete node from field
+        Args:
+            node (Node): Node that will be removed
+        """
+        self.nodeList.remove([node, 0])
+
+    def getBaseStation(self):
+        """
+        Get Base station node
+        Return
+            Base station node
+        """
+        return self.nodeList[0]
 
     def getNodes(self, nodetype='none'):
         """
         Get all or (nodetype) nodes in field
         Args:
             nodetype (str): Node type (init='none')
-        Return
+        Return0
             List of nodes in field
         """
         nodeList = self.nodeList[1:]
         if nodetype != 'none':
-            return list(filter(lambda x: x[0].getType() == nodetype, nodeList))
+            return list(filter(lambda x: x.getType() == nodetype, nodeList))
         return nodeList
 
     def getNearbyNodes(self, node, radius, nodetype='none'):
@@ -75,9 +101,8 @@ class Field:
         Return:
             List of nearby nodes
         """
-        nearbyNodes = list(filter(lambda x: node.getDistanceFromNode(x[0]) <= radius and node != x[0], self.getNodes(nodetype)))
+        nearbyNodes = list(filter(lambda x: node.getDistanceFromNode(x) <= radius and node != x, self.getNodes(nodetype)))
         return nearbyNodes
-
 
     def updateNodes(self, nodeList):
         """
@@ -113,14 +138,24 @@ class Field:
         for index in range(len(nodeList)):
             rand_num = np.random.rand()
             if rand_num < prob / 100:
-                node = nodeList[index][0]
+                node = nodeList[index]
                 node.setType('CH')
                 self.nodeCH.append(node)
                 count += 1
         self.nodeList = nodeList
         print("# Amount of Claster Header from 1st re-clustering = ", count)
 
-    def printField(self, pic_id=0, showplot=0):
+    def resetNode(self):
+        """
+        Reset node status
+        """
+        nodeList = self.getNodes()
+        for node in nodeList:
+            node.setType('CM')
+            node.clearPointerNode()
+        plt.clf()
+
+    def printField(self, pic_id=0, showplot=0, r=0):
         """
         Plot field
 
@@ -130,13 +165,12 @@ class Field:
         """
         x_cm, y_cm, x_ch, y_ch, i = [], [], [], [], 0
         for node in self.getNodes():
-            #print(i, node[0].getX(), node[0].getY(), node[0].getType())
-            if node[0].getType() == 'CH':
-                x_ch.append(node[0].getX())
-                y_ch.append(node[0].getY())
-            elif node[0].getType() != 'BS':
-                x_cm.append(node[0].getX())
-                y_cm.append(node[0].getY())
+            if node.getType() == 'CH':
+                x_ch.append(node.getX())
+                y_ch.append(node.getY())
+            elif node.getType() != 'BS':
+                x_cm.append(node.getX())
+                y_cm.append(node.getY())
         plt.scatter([-50], [50], s=35, label='BS', marker=mark.MarkerStyle('o', fillstyle='full'))
         plt.scatter(x_cm, y_cm, s=18, label='CM', marker=mark.MarkerStyle('.', fillstyle='full'))
         plt.scatter(x_ch, y_ch, s=20, label='CH', marker=mark.MarkerStyle(',', fillstyle='full'))
@@ -146,14 +180,7 @@ class Field:
         plt.title("Field")
         plt.legend(loc=0)
         if pic_id:
-            plt.savefig('sample_case/%04d' % pic_id, dpi=300)
+            plt.savefig('sample_case_proc/%04d/%04d' % (pic_id, r), dpi=300)
         if showplot:
             plt.show()
         plt.clf()
-
-    def run(self):
-        """
-        Run process
-        """
-        self.random_claster_header(20)
-        self.printField()

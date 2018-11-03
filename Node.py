@@ -5,7 +5,7 @@ class Node:
     """
     Object Node
     """
-    def __init__(self, x=0, y=0, energy=10, nodetype='CM', name='node'):
+    def __init__(self, x=0, y=0, energy=3, nodetype='CM', name='node', delay=0, t=0.2):
         """
         Initial variables for new node
         Args:
@@ -14,6 +14,8 @@ class Node:
             energy (float): Energy
             nodetype (str): Node type
             name (str): Name of node   # Not used
+            delay (float): Delay of node using while phase 2 if this node is CCH
+            t (float): Chance to be CCH
         """
         self.__x = x
         self.__y = y
@@ -22,6 +24,14 @@ class Node:
         self.__name = name
         self.__pointerNode = []
         self.__size = 0
+        self.__t = t
+        self.__delay = delay
+
+        """
+        Use to stored average residual energy if this node is CH
+        """
+        self.__energy_CM_avg = 0
+        self.__energy_all_avg = 0
 
     def getPosition(self):
         """
@@ -78,9 +88,50 @@ class Node:
         """
         return self.__size if self.getType() == 'CH' else 0
 
+    def getDelay(self):
+        """
+        Get delay
+        Return
+            delay (float): Delay of node
+        """
+        return self.__delay
+
+    def getT(self):
+        """
+        Get T
+        Return
+            t (float): T Chance
+        """
+        return self.__t
+
+    def setDelay(self, delay):
+        """
+        Set delay of node
+        Args:
+            delay (float): Delay of node
+        """
+        self.__delay = delay
+
+    def setT(self, t):
+        """
+        Set T
+        Args:
+            t (float): T Change
+        """
+        self.__t = t
+
+    def getSize(self):
+        """
+        Get size of Cluster Header node (CH) or 
+        return 0 for Cluster member Node (CM)
+        Return
+            Cluster size
+        """
+        return self.__size
+
     def updateSize(self):
         """
-        Update size of node if this node is Cluster Node
+        Update size of node if this node is Cluster Header Node
         otherwise return 0
         Return
             size (float): Size of node
@@ -101,13 +152,33 @@ class Node:
         """
         return ((self.__x - node.getX())**2 + (self.__y - node.getY())**2)**0.5
 
+    def getResidualEnergy(self):
+        """
+        Get residual energy of all CM node that connect to this node, if this node is CH
+        otherwise it should return energy itself
+        Return
+            Residual Energy
+        """
+        if self.getType() == 'CH':
+            return sum([node.getEnergy() for node in self.getPointerNode()])
+        else:
+            return self.getEnergy()
+
     def getPointerNode(self):
         """
-        Get pointer to some node that should be a header of this node
+        Get pointer to some node that should be a header of this node (if CM)
+        or get a list of CM that pointer to this node (if CH)
         Return
-            Header of this node
+            Header of this node or list of CM
         """
-        return self.__pointerNode
+        if self.getType() != 'CH':
+            if len(self.__pointerNode) > 0:
+                pointer = self.__pointerNode[0]
+            else:
+                pointer = self.__pointerNode
+        else:
+            pointer = self.__pointerNode
+        return pointer
 
     def setPointerNode(self, node):
         """
@@ -135,62 +206,87 @@ class Node:
         """
         self.__pointerNode.remove(node)
 
-    def __lt__(self, _node):
+    def clearPointerNode(self):
         """
-        Check this node have energy less than the other node
+        Clear pointer node
+        """
+        self.__pointerNode.clear()
+    
+    def setEnergy(self, energy):
+        """
+        Set energy to this node
         Args:
-            _node (Node): The other node
-        Return
-            True if this node have energy less than the other node, otherwise False
+            energy (float): Energy of this node
         """
-        return self.__energy < _node.getEnergy()
+        self.__energy = energy
 
-    def __le__(self, _node):
+    def computeAverageEnergy(self):
         """
-        Check this node have energy less than or equal the other node
-        Args:
-            _node (Node): The other node
-        Return
-            True if this node have energy less than or equal the other node, otherwise False
+        Compute calcuate average residual energy
         """
-        return self.__energy <= _node.getEnergy()
+        size = self.getSize()
+        member_list = self.getPointerNode()
+        residual_energy = self.getResidualEnergy()
+        self.__energy_CM_avg = residual_energy / len(member_list)
+        self.__energy_all_avg = (residual_energy + node.getEnergy()) / (len(member_list) + 1)
+    
+    def getAverageCM_energy(self):
+        return self.__energy_CM_avg
 
-    def __eq__(self, _node):
-        """
-        Check this node have energy equal the other node
-        Args:
-            _node (Node): The other node
-        Return
-            True if this node have energy equal the other node, otherwise False
-        """
-        return self.__energy == _node.getEnergy()
+    def getAverageAll_energy(self):
+        return self.__energy_all_avg
 
-    def __ne__(self, _node):
-        """
-        Check this node have energy not equal the other node
-        Args:
-            _node (Node): The other node
-        Return
-            True if this node have energy not equal the other node, otherwise False
-        """
-        return self.__energy != _node.getEnergy()
+    """
+    Sections Energy consumption
 
-    def __gt__(self, _node):
+    Variables define
+        eagg = 5*(10**(-9))             # (nJ/bit/signal) Energy dissipation for data aggergation
+        dzero = 87                      # Distance which we swap to the others equation of energy loss
+        ld = 4000                       # Length of data packet
+        eelec = 50*(10**(-9))           # Energy dissipation of transmitter & receiver electronics
+        efs = 10**-12                   # Energy dissipation of transmitter amplifier in Friis free space
+        emp = 0.0013*(10**-(12))        # Energy dissipation of data aggregation
+    """
+    def consume_receive(self):
         """
-        Check this node have energy greater than the other node
-        Args:
-            _node (Node): The other node
-        Return
-            True if this node have energy greater than the other node, otherwise False
+        Erx is the energy used by a sensor to receive
+        a data packet of >Ld< bit size and >Eelec< is the
+        constant factor of energy in transmitter and receiver
+        circuitry
         """
-        return self.__energy > _node.getEnergy()
+        eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics
+        ld = 4000
+        node.setEnergy(node.__Energy - eelec*ld)
 
-    def __ge__(self, _node):
+    def consume_transmit(self, d):
         """
-        Check this node have energy greater than or equal the other node
+        Energy used by a sensor to transmit >Ld< Bit
+        of data packet over a distance d. if d is less then
+        the threshold distance, d0, we ues terms of >Efs< as
+        the constant factors of energy in a free-space conmdition.
+        when d is greter thne or equal to d0, we use terms of >Emp<
+        for a multi-path fading condition.
         Args:
-            _node (Node): The other node
-        Return
-            True if this node have energy greater than or equal the other node, otherwise False
+            d (float): Distance
         """
-        return self.__energy >= _node.getEnergy()
+        eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics
+        ld = 4000 #Length of data packet
+        efs = 10**-12   #Energy dissipation of transmitter amplifier in Friis free space
+        emp = 0.0013*(10**-(12)) #Energy dissipation of data aggregation
+        dzero = 87
+        if d < dzero:
+            energy = ld * (eelec + efs * d**2)
+        else:
+            energy= ld * (eelec + emp * d**4)
+        node.setEnergy(node.__Energy - energy)
+
+    def consume_Eproc(self, amount_nodes):
+        """
+        It depends on size of total numder of bit >Lt< that
+        the CH received from all CMs and form itself and >Eagg< 
+        which is the energy costant for data aggergation
+        """
+        ld = 4000 #Length of data packet
+        eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics
+        energy = ld * amount_nodes * eelec
+        node.setEnergy(node.__Energy - energy)
