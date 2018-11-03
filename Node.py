@@ -14,6 +14,8 @@ class Node:
             energy (float): Energy
             nodetype (str): Node type
             name (str): Name of node   # Not used
+            delay (float): Delay of node using while phase 2 if this node is CCH
+            t (float): Chance to be CCH
         """
         self.__x = x
         self.__y = y
@@ -24,6 +26,12 @@ class Node:
         self.__size = 0
         self.__t = t
         self.__delay = delay
+
+        """
+        Use to stored average residual energy if this node is CH
+        """
+        self.__energy_CM_avg = 0
+        self.__energy_all_avg = 0
 
     def getPosition(self):
         """
@@ -112,9 +120,18 @@ class Node:
         """
         self.__t = t
 
+    def getSize(self):
+        """
+        Get size of Cluster Header node (CH) or 
+        return 0 for Cluster member Node (CM)
+        Return
+            Cluster size
+        """
+        return self.__size
+
     def updateSize(self):
         """
-        Update size of node if this node is Cluster Node
+        Update size of node if this node is Cluster Header Node
         otherwise return 0
         Return
             size (float): Size of node
@@ -134,6 +151,18 @@ class Node:
             Difference of distance between node
         """
         return ((self.__x - node.getX())**2 + (self.__y - node.getY())**2)**0.5
+
+    def getResidualEnergy(self):
+        """
+        Get residual energy of all CM node that connect to this node, if this node is CH
+        otherwise it should return energy itself
+        Return
+            Residual Energy
+        """
+        if self.getType() == 'CH':
+            return sum([node.getEnergy() for node in self.getPointerNode()])
+        else:
+            return self.getEnergy()
 
     def getPointerNode(self):
         """
@@ -190,6 +219,23 @@ class Node:
             energy (float): Energy of this node
         """
         self.__energy = energy
+
+    def computeAverageEnergy(self):
+        """
+        Compute calcuate average residual energy
+        """
+        size = self.getSize()
+        member_list = self.getPointerNode()
+        residual_energy = self.getResidualEnergy()
+        self.__energy_CM_avg = residual_energy / len(member_list)
+        self.__energy_all_avg = (residual_energy + node.getEnergy()) / (len(member_list) + 1)
+    
+    def getAverageCM_energy(self):
+        return self.__energy_CM_avg
+
+    def getAverageAll_energy(self):
+        return self.__energy_all_avg
+
     """
     Sections Energy consumption
 
@@ -201,7 +247,6 @@ class Node:
         efs = 10**-12                   # Energy dissipation of transmitter amplifier in Friis free space
         emp = 0.0013*(10**-(12))        # Energy dissipation of data aggregation
     """
-
     def consume_receive(self):
         """
         Erx is the energy used by a sensor to receive
@@ -211,7 +256,7 @@ class Node:
         """
         eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics
         ld = 4000
-        return eelec*ld
+        node.setEnergy(node.__Energy - eelec*ld)
 
     def consume_transmit(self, d):
         """
@@ -233,7 +278,7 @@ class Node:
             energy = ld * (eelec + efs * d**2)
         else:
             energy= ld * (eelec + emp * d**4)
-        return energy
+        node.setEnergy(node.__Energy - energy)
 
     def consume_Eproc(self, amount_nodes):
         """
@@ -244,64 +289,4 @@ class Node:
         ld = 4000 #Length of data packet
         eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics
         energy = ld * amount_nodes * eelec
-        return energy
-
-    def __lt__(self, _node):
-        """
-        Check this node have energy less than the other node
-        Args:
-            _node (Node): The other node
-        Return
-            True if this node have energy less than the other node, otherwise False
-        """
-        return self.__energy < _node.getEnergy()
-
-    def __le__(self, _node):
-        """
-        Check this node have energy less than or equal the other node
-        Args:
-            _node (Node): The other node
-        Return
-            True if this node have energy less than or equal the other node, otherwise False
-        """
-        return self.__energy <= _node.getEnergy()
-
-    def __eq__(self, _node):
-        """
-        Check this node have energy equal the other node
-        Args:
-            _node (Node): The other node
-        Return
-            True if this node have energy equal the other node, otherwise False
-        """
-        return self.__energy == _node.getEnergy()
-
-    def __ne__(self, _node):
-        """
-        Check this node have energy not equal the other node
-        Args:
-            _node (Node): The other node
-        Return
-            True if this node have energy not equal the other node, otherwise False
-        """
-        return self.__energy != _node.getEnergy()
-
-    def __gt__(self, _node):
-        """
-        Check this node have energy greater than the other node
-        Args:
-            _node (Node): The other node
-        Return
-            True if this node have energy greater than the other node, otherwise False
-        """
-        return self.__energy > _node.getEnergy()
-
-    def __ge__(self, _node):
-        """
-        Check this node have energy greater than or equal the other node
-        Args:
-            _node (Node): The other node
-        Return
-            True if this node have energy greater than or equal the other node, otherwise False
-        """
-        return self.__energy >= _node.getEnergy()
+        node.setEnergy(node.__Energy - energy)

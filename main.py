@@ -22,19 +22,18 @@ def CCH_election_phase(field, t):
         t     (float): Probability to promote node to be a Candidate Claster Header (CCH)
     """
     nodeList, count = field.getNodes(), 0
-    print(nodeList)
     for node in nodeList:
         node.setDelay(0)
-        print(node.getT())
         if np.random.rand() <= node.getT():
             node.setType('CCH')
             # Exploit : In first round, every node have same amount of energy how we decide which one to be CCH
             # Solution: Define starting node that be implant at initial energy +- 0.01
             node.setDelay((field.getInitEnergy() - node.getEnergy()) / field.getInitEnergy() * 10) # delay
             count += 1
-    # We wouldn't update nodes list because it stored it in object
-    #field.updateNodes(nodeList)
+    # We wouldn't update nodes list because it already stored in object
+    # field.updateNodes(nodeList)
     print("# Amount of Candidate Claster Header in Phase 1 =", count)
+
 
 def CH_competition_phase(field, radius):
     """
@@ -51,7 +50,11 @@ def CH_competition_phase(field, radius):
     CCH_nodeList = sorted(field.getNodes('CCH'), key=lambda x: x.getDelay(), reverse=False)
     for node in CCH_nodeList:
         if node.getType() == 'CCH':
+            # Consume Energy to sending a packet
+            node.consume_transmit(radius)
             for nearbyNode in field.getNearbyNodes(node, radius, 'CCH'):
+                # Consume Energy to receiving a packet
+                nearbyNode.consume_receive()
                 if nearbyNode > node:
                     node.setType('CM')
                     break
@@ -77,7 +80,10 @@ def cluster_announcement_phase(field, radius):
     alpha_radius = math.sqrt(2 * math.log(10)) * radius
     CH_nodeList = field.getNodes('CH')
     for node in CH_nodeList:
+        # Consume Energy to sending a packet
+        node.consume_transmit(radius)
         for nearbyNode in field.getNearbyNodes(node, alpha_radius, 'CM'):
+            nearbyNode.consume_receive()
             if not nearbyNode.hasPointerNode():
                 node.setPointerNode(nearbyNode)
                 nearbyNode.setPointerNode(node)
@@ -105,6 +111,7 @@ def cluster_announcement_phase(field, radius):
                 CH_node.setPointerNode(node)
     ''' # Ignore
 
+
 def cluster_association_phase(field):
     """
     Phase 4
@@ -121,9 +128,15 @@ def cluster_association_phase(field):
     """
     CH_nodeList = field.getNodes('CH')
 
-    # Find the size for each Cluster Header
+    for members in field.getNode('CM'):
+        CH_pointer = members.getPointerNode()
+        members.consume_transmit(members.getDistanceFromNode(CH_pointer))
+        CH_pointer.consume_receive()
+
+    # Find the size and average energy for each Cluster Header
     for node in field.getNodes('CH'):
         node.updateSize()
+        node.computeAverageEnergy()
 
     print("# Node left in field (assume that we finish):", len(field.getNodes()))
     # Plot graph to simulate environments
@@ -133,34 +146,36 @@ def cluster_association_phase(field):
 
     cluster_confirmation_phase(field)
 
+
 def cluster_confirmation_phase(field):
     """
     Phase 5
     Cluster Confirmation Phase
 
-    ...
+    All Cluster node will confirm the duty that they would be in a round
+    and so it's should start process by sending data to BaseStation
     """
-    # Assume that we finish all phase and all node will consume energy
     nodeList, count = field.getNodes(), 0
-    for node in field.getNodes():
-        if node.getType() == 'CH':
-            # Energy consumptions at CH node
-            size = len(node.getPointerNode())
-            consume_energy = node.consume_receive() * size + \
-                             node.consume_Eproc(len(node.getPointerNode())) + \
-                             node.consume_transmit(node.getDistanceFromNode(field.getBaseStation()))
-        elif node.getType() == 'CM':
-            # Energy consumptions at CM node
-            if node.getPointerNode():
-                distance = node.getDistanceFromNode(node.getPointerNode())
-            else:
-                distance = node.getDistanceFromNode(field.getBaseStation())
-            consume_energy = node.consume_transmit(distance)
-        node.setEnergy(node.getEnergy() - consume_energy)
+    for node in field.getNodes('CH'):
+        # Energy consumptions at CH node
+        # Create packet and sending to all CM which pointer to itself
+        members = node.getPointerNode()
+        for member in merbers:
+            node.consume_transmit(node.getDistanceFromNode(member))
+            member.consume_receive()
+            # Cluster member adjust T-value (Fuzzy Algorithm)
+            adjustment_T_value(node)
 
-        #if node.getType() == 'CH':
-        #    avg_energy = 0
-        
+        # Cluster Header
+        size = node.getSize()
+        member_list = node.getPointerNode()
+        residual_energy = node.getResidualEnergy()
+        avg_CM_energy = node.getAverageCM_energy()
+        avg_energy = node.getAverageAll_energy()
+        # Cluster Header adjust T-value (Fuzzy Algorithm)
+        adjustment_T_value(node)
+
+        node.consume_Eproc()
 
         if node.getEnergy() <= 0:
             field.deleteNode(node)
@@ -193,7 +208,7 @@ if __name__ == "__main__":
             CCH_election_phase(field, 20)
             CH_competition_phase(field, 30)
             cluster_announcement_phase(field, 30)
-            field.printField(pic_id=tc, r=len(left_node), showplot=1)
+            field.printField(pic_id=0, r=len(left_node), showplot=0)
             left_node.append(len(field.getNodes()))
             field.resetNode()
 
