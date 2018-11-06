@@ -10,6 +10,7 @@ import matplotlib.markers as mark
 from Field import Field
 from Node import Node
 
+
 def CCH_election_phase(field, t):
     """
     Phase 1
@@ -63,7 +64,6 @@ def CH_competition_phase(field, radius):
                 node.setType('CH')
                 count += 1
     print("# Amount of Claster Header in Phase 2 =", count)
-    print(CCH_nodeList)
 
 
 def cluster_announcement_phase(field, radius):
@@ -182,6 +182,40 @@ def cluster_confirmation_phase(field):
             field.deleteNode(node)
             del node
 
+def Fuzzy(energynode, energyavg, deployed_Cluster, Cluster_size):
+    
+    energyavg  = energyavg/energynode
+    High = max(0, min(1,(1-(1.1 - energyavg)/0.1))) if energyavg >= energynode else 0
+ 
+    MidHigh = max(0, min(1,(1.1 - energyavg)/0.1)) if energyavg >= energynode else 0
+ 
+    Midlow = max(0, min(1,(energyavg - 0.9)/0.1))
+ 
+    low = max(0, min(1,((1-(energyavg - 0.9)/0.1))))
+
+    #print((1-((Cluster_size - 0.9))/0.1) ,(Cluster_size - 0.9)/0.1, Cluster_size, deployed_Cluster)
+    Cluster_size =  Cluster_size/deployed_Cluster
+    Large = max(0, min(1, (1-(1.1 - Cluster_size)/deployed_Cluster*0.1))) if Cluster_size >= deployed_Cluster else 0
+    MidLarge = max(0, min(1, (1.1 - Cluster_size)/deployed_Cluster*0.1)) if Cluster_size >= deployed_Cluster else 0
+    midsmall = max(0, min(1, (Cluster_size - 0.9)/0.1))
+    small = max(0, min(1, (1-((Cluster_size - 0.9))/0.1)))
+ 
+    Highlarge, HighMidLarge, MidHighLarge, MidHighMidLarge = min(High,Large)*0.1, min(High, MidLarge)*0.08, min(MidHigh, Large)*0.06, min(MidHigh, MidLarge)*0.04
+    MidlowLarge, MidlowMidLarge, lowLarge, lowMidLarge = min(Midlow, Large)*0.02, min(Midlow, MidLarge)*0.0125, min(low, MidLarge)*0.00625, min(low, Large)*0.00325
+    Highmidsmall, MidHighmidsmall, Midlowmidsmall, lowmidsmall = min(High, midsmall)*(0.00325), min(MidHigh, midsmall)*(0.00625),min(Midlow, midsmall)*(0.125), min(low, midsmall)*(0.02)
+    Highsmall, MidHighsmall, Midlowsmall, lowsmall = min(High, small)*(0.04), min(MidHigh, small)*(0.06), min(Midlow, small)*(0.08), min(low, small)*(0.1)
+
+    T_Section = [Highlarge, HighMidLarge, MidHighLarge, MidHighMidLarge, MidlowLarge, MidlowMidLarge, lowLarge, lowMidLarge, Highmidsmall, MidHighmidsmall, Midlowmidsmall, lowmidsmall,  Highsmall, MidHighsmall, Midlowsmall, lowsmall]
+    T = Highlarge + HighMidLarge + MidHighLarge + MidHighMidLarge + MidlowLarge + MidlowMidLarge + lowMidLarge + lowLarge + Highmidsmall+ MidHighmidsmall + Midlowmidsmall+ lowmidsmall
+    T += Highsmall+ MidHighsmall + Midlowsmall + lowsmall
+    #print(T_Section)
+        #print(Highlarge, HighMidLarge, MidHighLarge, MidHighMidLarge,MidlowLarge)
+        #print( MidlowMidLarge, lowMidLarge, lowLarge,Highsmall, MidHighsmall)
+    print(High,MidHigh,Midlow ,low )
+    print(small, midsmall, MidLarge ,Large)
+    print()
+        #print()
+    return T
 
 def adjustment_T_value(field, node):
     """
@@ -190,10 +224,16 @@ def adjustment_T_value(field, node):
     """
     # This is crisp adjustment
     radius = field.getRadius()
-    if node.getSize() > radius:
-        node.setT(node.getT() * 1.01)
-    elif node.getSize() < radius:
-        node.setT(node.getT() * 0.99)
+    value_G =  Fuzzy(node.getEnergy(), node.getAverageAll_energy(), radius, node.getSize())# deployed_Cluster, Cluster_size
+    if value_G <= 0.5:
+        node.setT(node.getT() + 0.01*(0.5 - value_G)/0.5)
+    else:
+        node.setT(node.getT() - 0.01*(value_G - 0.5)/0.5)
+    if node.getT() > 1:
+        node.setT(1)
+    if node.getT() > 0.1:
+        node.setT(0.01)
+    #print(Fuzzy(node.getEnergy(), node.getAverageAll_energy(), node.getSize(), radius)*0.01)
 
     # To-do Fuzzy here
     # ...
@@ -213,10 +253,11 @@ if __name__ == "__main__":
 
         field = Field(100, 0.0125, radius=field_radius, start_energy=3, t=0.2)
         left_node = [int(field.getDensity() * int(field.getSize())**2)]
-
+        CCH_nodeCount = [0]
         while len(field.getNodes()) > 0:
             print('\nRound:', len(left_node))
             CCH_election_phase(field, 20)
+            CCH_nodeCount.append(len(field.getNodes('CCH')))
             CH_competition_phase(field, field_radius)
             cluster_announcement_phase(field, field_radius)
             field.printField(pic_id=tc, r=len(left_node), showplot=0)
@@ -230,19 +271,29 @@ if __name__ == "__main__":
         plt.ylabel('Node')
         plt.title("Node left per round")
         # plt.show()
-        plt.savefig('sample_case_proc/%04d' % tc, dpi=300)
+        plt.savefig('sample_case_proc/%04d_LEFT' % tc, dpi=300)
         plt.clf()
+
+        plt.plot(list(range(len(CCH_nodeCount))), CCH_nodeCount)
+        plt.xlabel('Round')
+        plt.ylabel('Amount of CH Node')
+        plt.title("CH node per round")
+        # plt.show()
+        plt.savefig('sample_case_proc/%04d_CCH' % tc, dpi=300)
+        plt.clf()
+        '''
         # Save File
         try:
             path_o = "sample_case_proc/%04d.txt" % (tc)
             print(path_o)
             f_o = open(os.path.join(path_o), "w+")
-            f_o.writelines("\n".join(list(map(str, left_node))))
+            f_o.writelines("\n".join(list(map(str, CH_nodeCount))))
             f_o.close()
 
             print("Save I/O Complete")
         except:
             print("Save I/O Error")
+        '''
 
         del field
         
