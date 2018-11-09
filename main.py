@@ -157,6 +157,7 @@ def cluster_confirmation_phase(field):
     and so it's should start process by sending data to BaseStation
     """
     nodeList, count = field.getNodes(), 0
+    numT = []
     for node in field.getNodes('CH'):
         # Energy consumptions at CH node
         # Create packet and sending to all CM which pointer to itself
@@ -174,48 +175,56 @@ def cluster_confirmation_phase(field):
         avg_CM_energy = node.getAverageCM_energy()
         avg_energy = node.getAverageAll_energy()
         # Cluster Header adjust T-value (Fuzzy Algorithm)
-        adjustment_T_value(field, node)
+        numT.append(adjustment_T_value(field, node))
 
         node.consume_Eproc(len(member_list))
 
         if node.getEnergy() <= 0:
             field.deleteNode(node)
             del node
+    if len(field.getNodes()) == 1:
+        for node in field.getNodes('CH'):
+            del node
 
 def Fuzzy(energynode, energyavg, deployed_Cluster, Cluster_size):
     
-    energyavg  = energyavg/energynode
-    High = max(0, min(1,(1-(1.1 - energyavg)/0.1))) if energyavg >= energynode else 0
+    energyavg2  = energyavg/energynode
+    High = max(0, min(1,(1-(1.1 - energyavg2)/0.1))) if energyavg >= energynode else 0
  
-    MidHigh = max(0, min(1,(1.1 - energyavg)/0.1)) if energyavg >= energynode else 0
+    MidHigh = max(0, min(1,(1.1 - energyavg2)/0.1)) if energyavg >= energynode else 0
  
-    Midlow = max(0, min(1,(energyavg - 0.9)/0.1))
+    Midlow = max(0, min(1,(energyavg2 - 0.9)/0.1)) if energyavg <= energynode else 0
  
-    low = max(0, min(1,((1-(energyavg - 0.9)/0.1))))
+    low = max(0, min(1,((1-(energyavg2 - 0.9)/0.1)))) if energyavg <= energynode else 0
 
     #print((1-((Cluster_size - 0.9))/0.1) ,(Cluster_size - 0.9)/0.1, Cluster_size, deployed_Cluster)
-    Cluster_size =  Cluster_size/deployed_Cluster
-    Large = max(0, min(1, (1-(1.1 - Cluster_size)/deployed_Cluster*0.1))) if Cluster_size >= deployed_Cluster else 0
-    MidLarge = max(0, min(1, (1.1 - Cluster_size)/deployed_Cluster*0.1)) if Cluster_size >= deployed_Cluster else 0
-    midsmall = max(0, min(1, (Cluster_size - 0.9)/0.1))
-    small = max(0, min(1, (1-((Cluster_size - 0.9))/0.1)))
+    Cluster_size2 =  Cluster_size/deployed_Cluster
+    Large = max(0, min(1, (1-(1.1 - Cluster_size2)/0.1))) if Cluster_size >= deployed_Cluster else 0
+    MidLarge = max(0, min(1, (1.1 - Cluster_size2)/0.1)) if Cluster_size >= deployed_Cluster else 0
+    midsmall = max(0, min(1, (Cluster_size2 - 0.9)/0.1)) if Cluster_size <= deployed_Cluster else 0
+    small = max(0, min(1, (1-((Cluster_size2 - 0.9))/0.1))) if Cluster_size <= deployed_Cluster else 0
  
-    Highlarge, HighMidLarge, MidHighLarge, MidHighMidLarge = min(High,Large)*0.1, min(High, MidLarge)*0.08, min(MidHigh, Large)*0.06, min(MidHigh, MidLarge)*0.04
-    MidlowLarge, MidlowMidLarge, lowLarge, lowMidLarge = min(Midlow, Large)*0.02, min(Midlow, MidLarge)*0.0125, min(low, MidLarge)*0.00625, min(low, Large)*0.00325
-    Highmidsmall, MidHighmidsmall, Midlowmidsmall, lowmidsmall = min(High, midsmall)*(0.00325), min(MidHigh, midsmall)*(0.00625),min(Midlow, midsmall)*(0.125), min(low, midsmall)*(0.02)
-    Highsmall, MidHighsmall, Midlowsmall, lowsmall = min(High, small)*(0.04), min(MidHigh, small)*(0.06), min(Midlow, small)*(0.08), min(low, small)*(0.1)
+    Highlarge, HighMidLarge, MidHighLarge, MidHighMidLarge = min(High,Large), min(High, MidLarge), min(MidHigh, Large), min(MidHigh, MidLarge)
+    MidlowLarge, MidlowMidLarge, lowLarge, lowMidLarge = min(Midlow, Large), min(Midlow, MidLarge), min(low, MidLarge), min(low, Large)
+    Highmidsmall, MidHighmidsmall, Midlowmidsmall, lowmidsmall = min(High, midsmall), min(MidHigh, midsmall),min(Midlow, midsmall), min(low, midsmall)
+    Highsmall, MidHighsmall, Midlowsmall, lowsmall = min(High, small), min(MidHigh, small), min(Midlow, small), min(low, small)
 
     T_Section = [Highlarge, HighMidLarge, MidHighLarge, MidHighMidLarge, MidlowLarge, MidlowMidLarge, lowLarge, lowMidLarge, Highmidsmall, MidHighmidsmall, Midlowmidsmall, lowmidsmall,  Highsmall, MidHighsmall, Midlowsmall, lowsmall]
-    T = Highlarge + HighMidLarge + MidHighLarge + MidHighMidLarge + MidlowLarge + MidlowMidLarge + lowMidLarge + lowLarge + Highmidsmall+ MidHighmidsmall + Midlowmidsmall+ lowmidsmall
-    T += Highsmall+ MidHighsmall + Midlowsmall + lowsmall
+    start_mid_t, T_value, count = 0.03125, 0, 0
+    for i in T_Section:
+        weight = i * start_mid_t
+        T_value += weight
+        start_mid_t += 0.0625
+        count += 1 if weight else 0
+    print(T_value / count)
+    return T_value
     #print(T_Section)
         #print(Highlarge, HighMidLarge, MidHighLarge, MidHighMidLarge,MidlowLarge)
         #print( MidlowMidLarge, lowMidLarge, lowLarge,Highsmall, MidHighsmall)
-    print(High,MidHigh,Midlow ,low )
-    print(small, midsmall, MidLarge ,Large)
-    print()
-        #print()
-    return T
+    #print(High,MidHigh,Midlow ,low )
+    #print(small, midsmall, MidLarge ,Large)
+    #print()
+    #print(T_Section)
 
 def adjustment_T_value(field, node):
     """
@@ -225,7 +234,8 @@ def adjustment_T_value(field, node):
     # This is crisp adjustment
     radius = field.getRadius()
     value_G =  Fuzzy(node.getEnergy(), node.getAverageAll_energy(), radius, node.getSize())# deployed_Cluster, Cluster_size
-    if value_G <= 0.5:
+    return value_G
+    """if value_G <= 0.5:
         node.setT(node.getT() + 0.01*(0.5 - value_G)/0.5)
     else:
         node.setT(node.getT() - 0.01*(value_G - 0.5)/0.5)
@@ -237,7 +247,7 @@ def adjustment_T_value(field, node):
 
     # To-do Fuzzy here
     # ...
-
+"""
 
 # This is main
 if __name__ == "__main__":
@@ -281,20 +291,19 @@ if __name__ == "__main__":
         # plt.show()
         plt.savefig('sample_case_proc/%04d_CCH' % tc, dpi=300)
         plt.clf()
-        '''
+        """
         # Save File
         try:
             path_o = "sample_case_proc/%04d.txt" % (tc)
             print(path_o)
             f_o = open(os.path.join(path_o), "w+")
-            f_o.writelines("\n".join(list(map(str, CH_nodeCount))))
+            f_o.writelines("\n".join(list(map(str, numT))))
             f_o.close()
 
             print("Save I/O Complete")
         except:
             print("Save I/O Error")
-        '''
-
+        """
         del field
         
         print("------- END OF Testcase %d -------" % tc)
