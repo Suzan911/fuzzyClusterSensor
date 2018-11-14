@@ -31,6 +31,7 @@ class Node:
         """
         Use to stored average residual energy if this node is CH
         """
+        self.__packet_energy = []
         self.__energy_CM_avg = 0
         self.__energy_all_avg = 0
 
@@ -89,7 +90,7 @@ class Node:
         Return
             size (float): Size of node
         """
-        return self.__size if self.getType() == 'CH' else 0
+        return self.__size
 
     def getDelay(self):
         """
@@ -138,7 +139,7 @@ class Node:
     def getSize(self):
         """
         Get size of Cluster Header node (CH) or 
-        return 0 for Cluster member Node (CM)
+        return size of pointer cluster for Cluster member Node (CM)
         Return
             Cluster size
         """
@@ -147,13 +148,16 @@ class Node:
     def updateSize(self):
         """
         Update size of node if this node is Cluster Header Node
-        otherwise return 0
+        update size of pointer node if this node is Cluster Member Node
         Return
             size (float): Size of node
         """
         size = 0
         if self.getType() == 'CH' and self.hasPointerNode():
             size = max(list(map(lambda x: self.getDistanceFromNode(x), self.getPointerNode())))
+            self.__size = size
+        elif self.getType() == 'CM':
+            size = self.getPointerNode().getSize()
             self.__size = size
         return size
 
@@ -186,14 +190,11 @@ class Node:
         Return
             Header of this node or list of CM
         """
-        if self.getType() != 'CH':
-            if len(self.__pointerNode) > 0:
-                pointer = self.__pointerNode[0]
-            else:
-                pointer = self.__pointerNode
+        # Need Fix
+        if self.getType() == 'CH':
+            return self.__pointerNode
         else:
-            pointer = self.__pointerNode
-        return pointer
+            return self.__pointerNode[0]
 
     def setPointerNode(self, node):
         """
@@ -240,17 +241,26 @@ class Node:
         Compute calcuate average residual energy
         """
         size = self.getSize()
-        member_list = self.getPointerNode()
-        residual_energy = self.getResidualEnergy()
-        if len(member_list):
-            self.__energy_CM_avg = residual_energy / len(member_list)
-            self.__energy_all_avg = (residual_energy + self.getEnergy()) / (len(member_list) + 1)
+        packets = self.getPacketEnergy()
+        residual_energy = sum(packets)
+        if len(packets):
+            self.__energy_CM_avg = residual_energy / len(packets)
+            self.__energy_all_avg = (residual_energy + self.getEnergy()) / (len(packets) + 1)
+        else:
+            self.__energy_CM_avg = 0
+            self.__energy_all_avg = self.getEnergy()
     
     def getAverageCM_energy(self):
-        return self.__energy_CM_avg
+        if self.getType() == 'CH':
+            return self.__energy_all_avg
+        else:
+            return self.getPointerNode().getAverageCM_energy()
 
     def getAverageAll_energy(self):
-        return self.__energy_all_avg
+        if self.getType() == 'CH':
+            return self.__energy_all_avg
+        else:
+            return self.getPointerNode().getAverageAll_energy()
 
     """
     Sections Energy consumption
@@ -306,3 +316,25 @@ class Node:
         eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics
         energy = ld * amount_nodes * eelec
         self.setEnergy(self.getEnergy() - energy)
+
+    def getPacketEnergy(self):
+        """
+        Get Packet energy
+        Return
+            Packet energy of Cluster member that pointer to this node
+        """
+        return self.__packet_energy
+
+    def append_packet_energy(self, packet):
+        """
+        Append packet energy for Cluster Member if this node is Cluster Header
+        Args:
+            packet (float): Packet of residual energy
+        """
+        self.__packet_energy.append(packet)
+
+    def clearPackets(self):
+        """
+        Clear packet energy
+        """
+        self.__packet_energy.clear()

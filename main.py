@@ -3,13 +3,13 @@ For running algorithm
 """
 import math
 import os
+import shutil
 import time as _time
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.markers as mark
 from Field import Field
 from Node import Node
-
 
 def CCH_election_phase(field, t):
     """
@@ -32,7 +32,7 @@ def CCH_election_phase(field, t):
             count += 1
     # We wouldn't update nodes list because it already stored in object
     # field.updateNodes(nodeList)
-    print("# Amount of Candidate Claster Header in Phase 1 =", count)
+    print("# Amount of Candidate Claster Header (CCH) in Phase 1 =", count)
 
 
 def CH_competition_phase(field, radius):
@@ -48,21 +48,27 @@ def CH_competition_phase(field, radius):
     """
     CCH_nodeList, count = field.getNodes('CCH'), 0
     CCH_nodeList = sorted(field.getNodes('CCH'), key=lambda x: x.getDelay(), reverse=False)
-    for node in CCH_nodeList:
+    # print("T value for each CCH")
+    # print([node.getT() for node in CCH_nodeList])
+
+    # Iterate thought remaining CCH node every iteraton
+    # So we can graruntee that so we can get only CCH which doesn't sleep during this phase  
+    while len(CCH_nodeList):
+        node = CCH_nodeList.pop(0)
+        # Consume Energy for sended a packet
+        node.consume_transmit(radius)
+        for nearbyNode in field.getNearbyNodes(node, radius, 'CCH'):
+            # Consume Energy for received a packet
+            nearbyNode.consume_receive()
+            if nearbyNode.getEnergy() > node.getEnergy():
+                node.setType('CM')
+                break
+            else:
+                nearbyNode.setType('CM')
+                CCH_nodeList.remove(nearbyNode)
         if node.getType() == 'CCH':
-            # Consume Energy to sending a packet
-            node.consume_transmit(radius)
-            for nearbyNode in field.getNearbyNodes(node, radius, 'CCH'):
-                # Consume Energy to receiving a packet
-                nearbyNode.consume_receive()
-                if nearbyNode.getEnergy() > node.getEnergy():
-                    node.setType('CM')
-                    break
-                else:
-                    nearbyNode.setType('CM')
-            if node.getType() == 'CCH':
-                node.setType('CH')
-                count += 1
+            node.setType('CH')
+            count += 1
     print("# Amount of Claster Header in Phase 2 =", count)
 
 
@@ -71,7 +77,7 @@ def cluster_announcement_phase(field, radius):
     Phase 3
     Cluster Announcement Phase
 
-    Cluster Header (CH) announce around themselves for make Cluster Members to pointer at them
+    Cluster Header (CH) announce around themselves for announce Cluster Members to pointer at them
 
     Args:
         field  (Field): Field
@@ -81,7 +87,7 @@ def cluster_announcement_phase(field, radius):
     CH_nodeList = field.getNodes('CH')
     for node in CH_nodeList:
         # Consume Energy to sending a packet
-        node.consume_transmit(radius)
+        node.consume_transmit(alpha_radius)
         for nearbyNode in field.getNearbyNodes(node, alpha_radius, 'CM'):
             nearbyNode.consume_receive()
             if not nearbyNode.hasPointerNode():
@@ -93,7 +99,7 @@ def cluster_announcement_phase(field, radius):
                 nearbyNode.setPointerNode(node)
 
     cluster_association_phase(field)
-    
+
     # In case; CM can't find any CH node nearby, so we need to brute force find CH
     # Find CH node in length of diagonal of area radius
     '''
@@ -109,7 +115,7 @@ def cluster_announcement_phase(field, radius):
                 node.getPointerNode().removePointerNode(node)
                 node.setPointerNode(CH_node)
                 CH_node.setPointerNode(node)
-    ''' # Ignore
+    ''' # Ignore for now
 
 
 def cluster_association_phase(field):
@@ -128,22 +134,15 @@ def cluster_association_phase(field):
     """
     CH_nodeList = field.getNodes('CH')
 
-    for member in field.getNodes('CM'):
-        CH_pointer = member.getPointerNode()
-        if CH_pointer:
-            member.consume_transmit(member.getDistanceFromNode(CH_pointer))
-            CH_pointer.consume_receive()
-
-    # Find the size and average energy for each Cluster Header
-    for node in field.getNodes('CH'):
+    for node in CH_nodeList:
+        members = node.getPointerNode()
+        for member in members:
+            member.consume_transmit(member.getDistanceFromNode(node))
+            node.consume_receive()
+            node.append_packet_energy(member.getEnergy())
+        # Find the size and average energy for each Cluster Header
         node.updateSize()
         node.computeAverageEnergy()
-
-    print("# Node left in field (assume that we finish):", len(field.getNodes()))
-    # Plot graph to simulate environments
-    for node in field.getNodes('CH'):
-        for member in node.getPointerNode():
-            plt.plot([node.getX(), member.getX()], [node.getY(), member.getY()], color='r', alpha=0.7, linewidth=0.8)
 
     cluster_confirmation_phase(field)
 
@@ -162,11 +161,12 @@ def cluster_confirmation_phase(field):
         # Energy consumptions at CH node
         # Create packet and sending to all CM which pointer to itself
         members = node.getPointerNode()
+        node.consume_transmit(node.getSize())
         for member in members:
-            node.consume_transmit(node.getDistanceFromNode(member))
             member.consume_receive()
+            member.updateSize()
             # Cluster member adjust T-value (Fuzzy Algorithm)
-            adjustment_T_value(field, node)
+            new_t = adjustment_T_value(field, member)
 
         # Cluster Header
         size = node.getSize()
@@ -177,82 +177,99 @@ def cluster_confirmation_phase(field):
         # Cluster Header adjust T-value (Fuzzy Algorithm)
         numT.append(adjustment_T_value(field, node))
 
-        node.consume_Eproc(len(member_list))
-
         if node.getEnergy() <= 0:
             field.deleteNode(node)
             del node
     if len(field.getNodes()) == 1:
         for node in field.getNodes('CH'):
             del node
-
-def Fuzzy(energynode, energyavg, deployed_Cluster, Cluster_size):
     
-    energyavg2  = energyavg/energynode
-    High = max(0, min(1,(1-(1.1 - energyavg2)/0.1))) if energyavg >= energynode else 0
- 
-    MidHigh = max(0, min(1,(1.1 - energyavg2)/0.1)) if energyavg >= energynode else 0
- 
-    Midlow = max(0, min(1,(energyavg2 - 0.9)/0.1)) if energyavg <= energynode else 0
- 
-    low = max(0, min(1,((1-(energyavg2 - 0.9)/0.1)))) if energyavg <= energynode else 0
+    print("# Node left in field (assume that we finish):", len(field.getNodes()))
+    # Plot graph to simulate environments
+    for node in field.getNodes('CH'):
+        for member in node.getPointerNode():
+            plt.plot([node.getX(), member.getX()], [node.getY(), member.getY()], color='r', alpha=0.7, linewidth=0.8)
+
+
+def standyPhase(field):
+    """
+    Standy Phase
+    """
+    for node in field.getNodes('CH'):
+        for member in node.getPointerNode():
+            member.consume_transmit(member.getDistanceFromNode(node))
+            node.consume_receive()
+        node.consume_Eproc(len(node.getPointerNode()) + 1)
+        node.consume_transmit(node.getDistanceFromNode(field.getBaseStation()))
+
+
+def Fuzzy(node_energy, avg_energy, cluster_size, init_radius):
+    """
+    Fuzzy algorithms
+    """
+    energy = node_energy / avg_energy
+    High = max(0, min(1,(1-(1.1 - energy)/0.1))) if energy >= 1 else 0
+    MidHigh = max(0, min(1,(1.1 - energy)/0.1)) if energy >= 1 else 0
+    MidLow = max(0, min(1,(energy - 0.9)/0.1)) if energy <= 1 else 0
+    Low = max(0, min(1,((1-(energy - 0.9)/0.1)))) if energy <= 1 else 0
+    #print(energy, High, MidHigh, MidLow, Low)
 
     #print((1-((Cluster_size - 0.9))/0.1) ,(Cluster_size - 0.9)/0.1, Cluster_size, deployed_Cluster)
-    Cluster_size2 =  Cluster_size/deployed_Cluster
-    Large = max(0, min(1, (1-(1.1 - Cluster_size2)/0.1))) if Cluster_size >= deployed_Cluster else 0
-    MidLarge = max(0, min(1, (1.1 - Cluster_size2)/0.1)) if Cluster_size >= deployed_Cluster else 0
-    midsmall = max(0, min(1, (Cluster_size2 - 0.9)/0.1)) if Cluster_size <= deployed_Cluster else 0
-    small = max(0, min(1, (1-((Cluster_size2 - 0.9))/0.1))) if Cluster_size <= deployed_Cluster else 0
- 
-    Highlarge, HighMidLarge, MidHighLarge, MidHighMidLarge = min(High,Large), min(High, MidLarge), min(MidHigh, Large), min(MidHigh, MidLarge)
-    MidlowLarge, MidlowMidLarge, lowLarge, lowMidLarge = min(Midlow, Large), min(Midlow, MidLarge), min(low, MidLarge), min(low, Large)
-    Highmidsmall, MidHighmidsmall, Midlowmidsmall, lowmidsmall = min(High, midsmall), min(MidHigh, midsmall),min(Midlow, midsmall), min(low, midsmall)
-    Highsmall, MidHighsmall, Midlowsmall, lowsmall = min(High, small), min(MidHigh, small), min(Midlow, small), min(low, small)
+    size = cluster_size / init_radius
+    Large = max(0, min(1, (1-(1.1 - size)/0.1))) if size >= 1 else 0
+    MidLarge = max(0, min(1, (1.1 - size)/0.1)) if size >= 1 else 0
+    MidSmall = max(0, min(1, (size - 0.9)/0.1)) if size <= 1 else 0
+    Small = max(0, min(1, (1-((size - 0.9))/0.1))) if size <= 1 else 0
+    #print(size, Large, MidLarge, MidSmall, Small)
 
-    T_Section = [Highlarge, HighMidLarge, MidHighLarge, MidHighMidLarge, MidlowLarge, MidlowMidLarge, lowLarge, lowMidLarge, Highmidsmall, MidHighmidsmall, Midlowmidsmall, lowmidsmall,  Highsmall, MidHighsmall, Midlowsmall, lowsmall]
-    start_mid_t, T_value, count = 0.03125, 0, 0
-    for i in T_Section:
+    rules = [min(High, Large), min(High, MidLarge), min(MidHigh, Large), min(MidHigh, MidLarge), 
+             min(MidLow, Large), min(MidLow, MidLarge), min(Low, Large), min(Low, MidLarge),
+             min(High, MidSmall), min(MidHigh, MidSmall), min(MidLow, MidSmall), min(Low, MidSmall),
+             min(High, Small), min(MidHigh, Small), min(MidLow, Small), min(Low, Small)]
+    #print(rules)
+    
+    start_mid_t, T_value, count = 0.03125, 0, -1
+    for i in rules:
         weight = i * start_mid_t
         T_value += weight
+        count = count + start_mid_t if weight and count >= 0 else start_mid_t if weight else count
         start_mid_t += 0.0625
-        count += 1 if weight else 0
-    print(T_value / count)
-    return T_value
-    #print(T_Section)
-        #print(Highlarge, HighMidLarge, MidHighLarge, MidHighMidLarge,MidlowLarge)
-        #print( MidlowMidLarge, lowMidLarge, lowLarge,Highsmall, MidHighsmall)
-    #print(High,MidHigh,Midlow ,low )
-    #print(small, midsmall, MidLarge ,Large)
+    # print(rules, T_value / count, count)
+    #print(T_value / count)
     #print()
-    #print(T_Section)
+    return T_value / count
+    #return T_value / count
+
 
 def adjustment_T_value(field, node):
     """
     T-Value adjustment
-
     """
-    # This is crisp adjustment
+    # Fuzzy algorithms
     radius = field.getRadius()
-    value_G =  Fuzzy(node.getEnergy(), node.getAverageAll_energy(), radius, node.getSize())# deployed_Cluster, Cluster_size
-    return value_G
-    """if value_G <= 0.5:
-        node.setT(node.getT() + 0.01*(0.5 - value_G)/0.5)
+    value_G = Fuzzy(node.getEnergy(), node.getAverageAll_energy(), node.getSize(), radius)
+    a = (node.getT())
+    if value_G <= 0.5:
+        new_T = node.getT() + 0.01*(0.5 - value_G)/0.5
+        node.setT(new_T)
     else:
-        node.setT(node.getT() - 0.01*(value_G - 0.5)/0.5)
+        new_T = node.getT() - 0.01*(value_G - 0.5)/0.5
+        node.setT(new_T)
+    
     if node.getT() > 1:
         node.setT(1)
-    if node.getT() > 0.1:
+    elif node.getT() <= 0.01:
         node.setT(0.01)
+    
+    #print(a, new_T, a - new_T ,value_G)
+    #print()
     #print(Fuzzy(node.getEnergy(), node.getAverageAll_energy(), node.getSize(), radius)*0.01)
-
-    # To-do Fuzzy here
-    # ...
-"""
 
 # This is main
 if __name__ == "__main__":
     start_loop = int(input('Start loop: '))
     final_loop = int(input('Final loop: '))
+    standy_loop = int(input('Standy loop: '))
     field_radius = int(input('Init Radius: '))
     start_time = _time.time()
     for tc in range(start_loop, final_loop + 1):
@@ -260,20 +277,36 @@ if __name__ == "__main__":
 
         if not os.path.isdir("sample_case_proc/%04d" % tc):
             os.mkdir("sample_case_proc/%04d" % tc)
+        else:
+            shutil.rmtree("sample_case_proc/%04d" % tc)
+            os.mkdir("sample_case_proc/%04d" % tc)
 
         field = Field(100, 0.0125, radius=field_radius, start_energy=3, t=0.2)
         left_node = [int(field.getDensity() * int(field.getSize())**2)]
         CCH_nodeCount = [0]
-        while len(field.getNodes()) > 0:
+        t_avg_per_round = []
+        e_avg_per_round = []
+        r_avg_per_round = []
+        while len(field.getNodes()) > 0: #(field.getDensity() * field.getSize()**2):
             print('\nRound:', len(left_node))
             CCH_election_phase(field, 20)
             CCH_nodeCount.append(len(field.getNodes('CCH')))
             CH_competition_phase(field, field_radius)
             cluster_announcement_phase(field, field_radius)
             field.printField(pic_id=tc, r=len(left_node), showplot=0)
+            
+            # Data storage
+            nodes = field.getNodes()
+            CH_nodes = field.getNodes('CH')
             left_node.append(len(field.getNodes()))
+            e_avg_per_round.append(sum([n.getAverageAll_energy() for n in CH_nodes]) / len(CH_nodes) if len(CH_nodes) else 0)
+            r_avg_per_round.append(sum([n.getSize() for n in CH_nodes]) / len(CH_nodes) if len(CH_nodes) else 0)
+            t_avg_per_round.append(sum([n.getT() for n in nodes]) / len(nodes) if len(nodes) else 0)
+            for _ in range(standy_loop):
+                standyPhase(field)
             field.resetNode()
-        print()
+        #print("-- First node died at round", len(left_node))
+        print("-- End of simulation")
         
         # Save graph
         plt.plot(list(range(len(left_node))), left_node)
@@ -281,29 +314,53 @@ if __name__ == "__main__":
         plt.ylabel('Node')
         plt.title("Node left per round")
         # plt.show()
-        plt.savefig('sample_case_proc/%04d_LEFT' % tc, dpi=300)
+        plt.savefig('sample_case_proc/%04d/%04dx_LEFT' % (tc, tc), dpi=300)
         plt.clf()
 
         plt.plot(list(range(len(CCH_nodeCount))), CCH_nodeCount)
         plt.xlabel('Round')
-        plt.ylabel('Amount of CH Node')
-        plt.title("CH node per round")
+        plt.ylabel('Amount of CCH Node')
+        plt.title("CCH node per round")
         # plt.show()
-        plt.savefig('sample_case_proc/%04d_CCH' % tc, dpi=300)
+        plt.savefig('sample_case_proc/%04d/%04dx_CCH' % (tc, tc), dpi=300)
         plt.clf()
-        """
+
+        plt.plot(list(range(len(t_avg_per_round))), t_avg_per_round)
+        plt.xlabel('Round')
+        plt.ylabel('T')
+        plt.title("T Average per round")
+        # plt.show()
+        plt.savefig('sample_case_proc/%04d/%04dx_T_AVG' % (tc, tc), dpi=300)
+        plt.clf()
+
+        plt.plot(list(range(len(e_avg_per_round))), e_avg_per_round)
+        plt.xlabel('Round')
+        plt.ylabel('Energy')
+        plt.title("Energy Average per round")
+        # plt.show()
+        plt.savefig('sample_case_proc/%04d/%04dx_E_AVG' % (tc, tc), dpi=300)
+        plt.clf()
+
+        plt.plot(list(range(len(r_avg_per_round))), r_avg_per_round)
+        plt.xlabel('Round')
+        plt.ylabel('Size Cluster')
+        plt.title("Size Cluster Average per round")
+        # plt.show()
+        plt.savefig('sample_case_proc/%04d/%04dx_R_AVG' % (tc, tc), dpi=300)
+        plt.clf()
+        
         # Save File
         try:
-            path_o = "sample_case_proc/%04d.txt" % (tc)
+            path_o = "sample_case_proc/%04d/%04dx_T_AVG.txt" % (tc, tc)
             print(path_o)
             f_o = open(os.path.join(path_o), "w+")
-            f_o.writelines("\n".join(list(map(str, numT))))
+            f_o.writelines("\n".join(list(map(str, t_avg_per_round))))
             f_o.close()
 
             print("Save I/O Complete")
         except:
             print("Save I/O Error")
-        """
+        
         del field
         
         print("------- END OF Testcase %d -------" % tc)

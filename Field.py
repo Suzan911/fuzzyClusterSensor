@@ -164,6 +164,7 @@ class Field:
             node.setDelay(0)
             node.setState('active')
             node.clearPointerNode()
+            node.clearPackets()
         plt.clf()
 
     def printField(self, pic_id=0, showplot=0, r=0):
@@ -195,3 +196,4 @@ class Field:
         if showplot:
             plt.show()
         plt.clf()
+        print("--- Save Field ---")
