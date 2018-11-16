@@ -32,6 +32,7 @@ class Field:
         self.createNode(-50, 50, 'BS')
         for _ in range(int(self._density * self._size**2)):
             self.createNode(np.random.rand() * size, np.random.rand() * size, 'CM', t=t)
+        self.updateDistance()
 
     def getSize(self):
         """
@@ -135,24 +136,11 @@ class Field:
         """
         self._round += 1
 
-    def random_claster_header(self, prob):
+    def updateDistance(self):
         """
-        Random select node to be a Claster header
-        Args:
-            prob (float): Probability to promote node to be a Claster header
+        Update distance to 
         """
-        self.nodeCH.clear()
-        nodeList = self.getNodes()
-        count = 0
-        for index in range(len(nodeList)):
-            rand_num = np.random.rand()
-            if rand_num < prob / 100:
-                node = nodeList[index]
-                node.setType('CH')
-                self.nodeCH.append(node)
-                count += 1
-        self.nodeList = nodeList
-        print("# Amount of Claster Header from 1st re-clustering = ", count)
+        pass
 
     def resetNode(self):
         """
@@ -196,4 +184,4 @@ class Field:
         if showplot:
             plt.show()
         plt.clf()
-        print("--- Save Field ---")
+        #print("--- Save Field ---")

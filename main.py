@@ -6,6 +6,7 @@ import os
 import shutil
 import time as _time
 import numpy as np
+import multiprocessing as mp
 import matplotlib.pyplot as plt
 import matplotlib.markers as mark
 from Field import Field
@@ -32,7 +33,7 @@ def CCH_election_phase(field, t):
             count += 1
     # We wouldn't update nodes list because it already stored in object
     # field.updateNodes(nodeList)
-    print("# Amount of Candidate Claster Header (CCH) in Phase 1 =", count)
+    #print("# Amount of Candidate Claster Header (CCH) in Phase 1 =", count)
 
 
 def CH_competition_phase(field, radius):
@@ -69,7 +70,7 @@ def CH_competition_phase(field, radius):
         if node.getType() == 'CCH':
             node.setType('CH')
             count += 1
-    print("# Amount of Claster Header in Phase 2 =", count)
+    #print("# Amount of Claster Header in Phase 2 =", count)
 
 
 def cluster_announcement_phase(field, radius):
@@ -184,7 +185,7 @@ def cluster_confirmation_phase(field):
         for node in field.getNodes('CH'):
             del node
     
-    print("# Node left in field (assume that we finish):", len(field.getNodes()))
+    #print("# Node left in field (assume that we finish):", len(field.getNodes()))
     # Plot graph to simulate environments
     for node in field.getNodes('CH'):
         for member in node.getPointerNode():
@@ -232,7 +233,7 @@ def Fuzzy(node_energy, avg_energy, cluster_size, init_radius):
     for i in rules:
         weight = i * start_mid_t
         T_value += weight
-        count = count + start_mid_t if weight and count >= 0 else start_mid_t if weight else count
+        count = count + i if weight and count >= 0 else i if weight else count
         start_mid_t += 0.0625
     # print(rules, T_value / count, count)
     #print(T_value / count)
@@ -266,14 +267,15 @@ def adjustment_T_value(field, node):
     #print(Fuzzy(node.getEnergy(), node.getAverageAll_energy(), node.getSize(), radius)*0.01)
 
 # This is main
-if __name__ == "__main__":
-    start_loop = int(input('Start loop: '))
-    final_loop = int(input('Final loop: '))
-    standy_loop = int(input('Standy loop: '))
-    field_radius = int(input('Init Radius: '))
+def running(k):
+    start_loop = k#int(input('Start loop: '))
+    final_loop = k#int(input('Final loop: '))
+    standy_loop = 1#int(input('Standy loop: '))
+    field_radius = 20#int(input('Init Radius: '))
     start_time = _time.time()
+    print("Processing at testcase {} started. {}".format(k, mp.current_process()))
     for tc in range(start_loop, final_loop + 1):
-        print('Testcase', tc)
+        #print('Testcase', tc)
 
         if not os.path.isdir("sample_case_proc/%04d" % tc):
             os.mkdir("sample_case_proc/%04d" % tc)
@@ -287,8 +289,8 @@ if __name__ == "__main__":
         t_avg_per_round = []
         e_avg_per_round = []
         r_avg_per_round = []
-        while len(field.getNodes()) > 0: #(field.getDensity() * field.getSize()**2):
-            print('\nRound:', len(left_node))
+        while len(field.getNodes()) >= (field.getDensity() * field.getSize()**2):
+            #print('\nRound:', len(left_node))
             CCH_election_phase(field, 20)
             CCH_nodeCount.append(len(field.getNodes('CCH')))
             CH_competition_phase(field, field_radius)
@@ -302,11 +304,13 @@ if __name__ == "__main__":
             e_avg_per_round.append(sum([n.getAverageAll_energy() for n in CH_nodes]) / len(CH_nodes) if len(CH_nodes) else 0)
             r_avg_per_round.append(sum([n.getSize() for n in CH_nodes]) / len(CH_nodes) if len(CH_nodes) else 0)
             t_avg_per_round.append(sum([n.getT() for n in nodes]) / len(nodes) if len(nodes) else 0)
+            
+            field.nextRound()
             for _ in range(standy_loop):
                 standyPhase(field)
             field.resetNode()
         #print("-- First node died at round", len(left_node))
-        print("-- End of simulation")
+        #print("-- End of simulation")
         
         # Save graph
         plt.plot(list(range(len(left_node))), left_node)
@@ -352,18 +356,25 @@ if __name__ == "__main__":
         # Save File
         try:
             path_o = "sample_case_proc/%04d/%04dx_T_AVG.txt" % (tc, tc)
-            print(path_o)
+            #print(path_o)
             f_o = open(os.path.join(path_o), "w+")
             f_o.writelines("\n".join(list(map(str, t_avg_per_round))))
             f_o.close()
 
-            print("Save I/O Complete")
+            #print("Save I/O Complete")
         except:
-            print("Save I/O Error")
-        
+            pass
+            #print("Save I/O Error")
         del field
-        
-        print("------- END OF Testcase %d -------" % tc)
-    print("---------- END OF EXECUTION ----------")
-    print("-- Using %s seconds --" % (_time.time() - start_time))
+        #print("------- END OF Testcase %d -------" % tc)
+    #print("---------- END OF EXECUTION ----------")
+    #print("-- Using %s seconds --" % (_time.time() - start_time))
+    print("Processing at testcase {} finished. {}".format(k, mp.current_process()))
 
+def main():
+    if __name__ == "__main__":
+        pool = mp.Pool(4)
+        pool.map(running, range(1, 50))
+
+main()
+    

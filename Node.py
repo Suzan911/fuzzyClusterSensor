@@ -35,6 +35,11 @@ class Node:
         self.__energy_CM_avg = 0
         self.__energy_all_avg = 0
 
+        """
+        Use to stored distance from this node to the others node
+        """
+        self.__distance_noce = dict()
+
     def getPosition(self):
         """
         Get positions of node
