@@ -274,8 +274,6 @@ def running(tc, t_init, size):
     # size = 10
     #----------------------
 
-    start_loop = 1#int(input('Start loop: '))
-    final_loop = 10#int(input('Final loop: '))
     standy_loop = 1#int(input('Standy loop: '))
     field_radius = size#int(input('Init Radius: '))
     t_init_for_file = int(t_init * 100)
