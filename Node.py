@@ -1,6 +1,7 @@
 """
 For declare Node class
 """
+import numpy as np
 class Node:
     """
     Object Node
@@ -38,7 +39,7 @@ class Node:
         """
         Use to stored distance from this node to the others node
         """
-        self.__distance_noce = dict()
+        self.__distance_node = dict()
 
     def getPosition(self):
         """
@@ -164,7 +165,7 @@ class Node:
         elif self.getType() == 'CM':
             size = self.getPointerNode().getSize()
             self.__size = size
-        return size
+        return self.__size
 
     def getDistanceFromNode(self, node):
         """
@@ -174,7 +175,13 @@ class Node:
         Return
             Difference of distance between node
         """
-        return ((self.__x - node.getX())**2 + (self.__y - node.getY())**2)**0.5
+        '''
+        if node not in self.__distance_node:
+            self.__distance_node[node] = ((self.__x - node.getX())**2 + (self.__y - node.getY())**2)**0.5
+        '''
+        if node not in self.__distance_node:
+            self.__distance_node[node] = ((self.__x - node.getX())**2 + (self.__y - node.getY())**2)**0.5
+        return self.__distance_node[node]
 
     def getResidualEnergy(self):
         """
@@ -184,7 +191,7 @@ class Node:
             Residual Energy
         """
         if self.getType() == 'CH':
-            return sum([node.getEnergy() for node in self.getPointerNode()])
+            return np.sum([node.getEnergy() for node in self.getPointerNode()])
         else:
             return self.getEnergy()
 
@@ -197,9 +204,10 @@ class Node:
         """
         # Need Fix
         if self.getType() == 'CH':
-            return self.__pointerNode
+            pointer = self.__pointerNode
         else:
-            return self.__pointerNode[0]
+            pointer = self.__pointerNode[0]
+        return pointer
 
     def setPointerNode(self, node):
         """
@@ -247,7 +255,7 @@ class Node:
         """
         size = self.getSize()
         packets = self.getPacketEnergy()
-        residual_energy = sum(packets)
+        residual_energy = np.sum(packets)
         if len(packets):
             self.__energy_CM_avg = residual_energy / len(packets)
             self.__energy_all_avg = (residual_energy + self.getEnergy()) / (len(packets) + 1)

@@ -11,7 +11,7 @@ class Field:
     """
     Object Field
     """
-    def __init__(self, size=1, density=0, radius=30, start_energy=3, r=0, t=0.2):
+    def __init__(self, size=1, density=0, radius=30, start_energy=3, r=1, t=0.2):
         """
         Initial variable for new field
         Args:
@@ -32,7 +32,7 @@ class Field:
         self.createNode(-50, 50, 'BS')
         for _ in range(int(self._density * self._size**2)):
             self.createNode(np.random.rand() * size, np.random.rand() * size, 'CM', t=t)
-        self.updateDistance()
+        # self.updateDistance() // Feature
 
     def getSize(self):
         """
@@ -130,17 +130,19 @@ class Field:
         """
         return self._start_energy
 
+    def getRound(self):
+        """
+        Get Round
+        Return
+            Round
+        """
+        return self._round
+
     def nextRound(self):
         """
         Goto next round
         """
         self._round += 1
-
-    def updateDistance(self):
-        """
-        Update distance to 
-        """
-        pass
 
     def resetNode(self):
         """
@@ -155,7 +157,7 @@ class Field:
             node.clearPackets()
         plt.clf()
 
-    def printField(self, pic_id=0, showplot=0, r=0):
+    def printField(self, testcase=0, rnd=0, showplot=0, radius=0):
         """
         Plot field
 
@@ -179,8 +181,8 @@ class Field:
         plt.ylabel('Y')
         plt.title("Field")
         plt.legend(loc=0)
-        if pic_id:
-            plt.savefig('sample_case_proc/%04d/%04d' % (pic_id, r), dpi=300)
+        if rnd:
+            plt.savefig("sample_case_proc/R%02d/T%02d/%04d/%04d" % (self.getRadius(), (self._t * 100), testcase, rnd), dpi=300)
         if showplot:
             plt.show()
         plt.clf()
