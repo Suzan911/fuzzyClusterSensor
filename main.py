@@ -277,6 +277,16 @@ def running(tc, t_init, size):
     standy_loop = 1#int(input('Standy loop: '))
     field_radius = size#int(input('Init Radius: '))
     t_init_for_file = int(t_init * 100)
+
+    # Check if file already generate
+    if not os.path.exists("sample_case_proc/R%02d/T%02d/%04d" % (size, t_init_for_file, tc)):
+        os.makedirs("sample_case_proc/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
+    else:
+        if os.path.exists("sample_case_proc/R%02d/T%02d/%04d/data.xls" % (size, t_init_for_file, tc)):
+            return
+        else:
+            shutil.rmtree("sample_case_proc/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
+            os.makedirs("sample_case_proc/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
         
     start_time = time.time()
     book = xlwt.Workbook(encoding="utf-8")
@@ -288,12 +298,6 @@ def running(tc, t_init, size):
     sheet1.write(0, 2, "Size")
     sheet1.write(0, 3, "T")
     sheet1.write(0, 4, "No Pointer node")
-
-    if not os.path.exists("sample_case_proc/R%02d/T%02d/%04d" % (size, t_init_for_file, tc)):
-        os.makedirs("sample_case_proc/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
-    else:
-        shutil.rmtree("sample_case_proc/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
-        os.makedirs("sample_case_proc/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
 
     field = Field(100, density, radius=field_radius, start_energy=3, t=t_init)
     left_node = [int(field.getDensity() * int(field.getSize())**2)]
@@ -386,7 +390,7 @@ def running(tc, t_init, size):
     time_used = time.time() - start_time
     sheet1.write(0, 5, "Time used: %f" % time_used)
     book.save("sample_case_proc/R%02d/T%02d/%04d/data.xls" % (size, t_init_for_file, tc))
-    print("Processing at testcase {} which set initial radius at {}, density at {} and T value at {}\nfinished within time {}.\nRunning on processer {}\n".format(tc, field_radius, density, t_init, time_used, mp.current_process()))
+    print("Processing at testcase {} which set initial radius at {}, density at {} and T value at {}\nfinished within time {}s.\nRunning on processer {}\n".format(tc, field_radius, density, t_init, time_used, mp.current_process()))
 
 def main():
     if __name__ == "__main__":
