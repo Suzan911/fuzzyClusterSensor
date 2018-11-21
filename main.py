@@ -347,7 +347,7 @@ def running(tc, t_init, size):
     # plt.show()
     plt.savefig("sample_case_proc/T%04d/%04d" % (t_init, testcase), dpi=300)
     plt.clf()
-    '''
+    
 
     plt.plot(list(range(len(t_avg_per_round))), t_avg_per_round)
     plt.xlabel('Round')
@@ -380,7 +380,7 @@ def running(tc, t_init, size):
     # plt.show()
     plt.savefig("sample_case_proc/R%02d/T%02d/%04d/size_avg" % (size, t_init_for_file, tc), dpi=300)
     plt.clf()
-    
+    '''
     del field
 
     time_used = time.time() - start_time
@@ -392,6 +392,6 @@ def main():
     if __name__ == "__main__":
         pool = mp.Pool(4)
         # Running thought T value for each 100 testcase
-        pool.starmap(running, product(range(1, 101), range(10, 81, 5), range(10, 41, 5))) # product(testcase, t-initial, size)
+        pool.starmap(running, product(range(1, 101), range(10, 81, 5), range(40, 81, 5))) # product(testcase, t-initial, size)
 
 main()
