@@ -10,10 +10,10 @@ import numpy as np
 import multiprocessing as mp
 import matplotlib.pyplot as plt
 import matplotlib.markers as mark
-#from xlutils.copy import copy as xl_copy
 from itertools import product
 from Field import Field
 from Node import Node
+#from xlutils.copy import copy as xl_copy
 
 def CCH_election_phase(field, t):
     """
@@ -251,17 +251,12 @@ def adjustment_T_value(field, node):
     # Fuzzy algorithms
     radius = field.getRadius()
     value_G = Fuzzy(node.getEnergy(), node.getAverageAll_energy(), node.getSize(), radius)
-    a = (node.getT())
     if value_G <= 0.5:
         new_T = node.getT() + 0.01*(0.5 - value_G)/0.5
         node.setT(max(0.01, min(1, new_T)))
     else:
         new_T = node.getT() - 0.01*(value_G - 0.5)/0.5
         node.setT(max(0.01, min(1, new_T)))
-
-    #print(a, new_T, a - new_T ,value_G)
-    #print()
-    #print(Fuzzy(node.getEnergy(), node.getAverageAll_energy(), node.getSize(), radius)*0.01)
 
 # This is main
 def running(tc, t_init, size):
@@ -352,8 +347,11 @@ def running(tc, t_init, size):
     plt.savefig("sample_case_proc/T%04d/%04d" % (t_init, testcase), dpi=300)
     plt.clf()
     '''
-
-    plt.plot(list(range(len(t_avg_per_round))), t_avg_per_round)
+    t_avg_case = np.sum(t_avg_per_round) / len(t_avg_per_round)
+    e_avg_case = np.sum(e_avg_per_round) / len(e_avg_per_round)
+    r_avg_case = np.sum(r_avg_per_round) / len(r_avg_per_round)
+    plt.plot(list(range(len(t_avg_per_round))), t_avg_per_round, linewidth=0.7, alpha=0.7)
+    plt.plot([0, len(t_avg_per_round)], [t_avg_case, t_avg_case], color='red')
     plt.xlabel('Round')
     plt.ylabel('T')
     plt.title("T Average per round")
@@ -361,7 +359,8 @@ def running(tc, t_init, size):
     plt.savefig("sample_case_proc/R%02d/T%02d/%04d/t_avg" % (size, t_init_for_file, tc), dpi=300)
     plt.clf()
 
-    plt.plot(list(range(len(e_avg_per_round))), e_avg_per_round)
+    plt.plot(list(range(len(e_avg_per_round))), e_avg_per_round, linewidth=0.7, alpha=0.7)
+    plt.plot([0, len(e_avg_per_round)], [e_avg_case, e_avg_case], color='red')
     plt.xlabel('Round')
     plt.ylabel('Energy')
     plt.title("Energy Average per round")
@@ -369,21 +368,14 @@ def running(tc, t_init, size):
     plt.savefig("sample_case_proc/R%02d/T%02d/%04d/energy_avg" % (size, t_init_for_file, tc), dpi=300)
     plt.clf()
 
-    plt.plot(list(range(len(r_avg_per_round))), r_avg_per_round)
+    plt.plot(list(range(len(r_avg_per_round))), r_avg_per_round, linewidth=0.7, alpha=0.7)
+    plt.plot([0, len(r_avg_per_round)], [r_avg_case, r_avg_case], color='red')
     plt.xlabel('Round')
     plt.ylabel('Size Cluster')
     plt.title("Size Cluster Average per round")
     # plt.show()
     plt.savefig("sample_case_proc/R%02d/T%02d/%04d/size_avg" % (size, t_init_for_file, tc), dpi=300)
-    plt.clf()
-
-    plt.plot(list(range(len(r_avg_per_round))), r_avg_per_round)
-    plt.xlabel('Round')
-    plt.ylabel('Size Cluster')
-    plt.title("Size Cluster Average per round")
-    # plt.show()
-    plt.savefig("sample_case_proc/R%02d/T%02d/%04d/size_avg" % (size, t_init_for_file, tc), dpi=300)
-    plt.clf()
+    plt.clf()    
     
     del field
 
@@ -395,7 +387,7 @@ def running(tc, t_init, size):
 def main():
     if __name__ == "__main__":
         pool = mp.Pool(4)
-        # Running thought T value for each 100 testcase
-        pool.starmap(running, product(range(1, 101), range(10, 81, 5), range(10, 41, 5))) # product(testcase, t-initial, size)
+        # Running thought R value and T value by each 100 testcase
+        pool.starmap(running, product(range(1, 101), range(10, 81, 5), range(45, 81, 5))) # product(testcase, t-initial, size)
 
 main()

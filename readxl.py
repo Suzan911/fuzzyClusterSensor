@@ -1,37 +1,64 @@
 import xlrd
 import xlwt
-import matplotlib.pyplot as plt
-import matplotlib.markers as mark
+import os
+import time
+"""import matplotlib.pyplot as plt
+import matplotlib.markers as mark"""
+import multiprocessing as mp
 import numpy as np
+from itertools import product
+from xlutils.copy import copy as xl_copy
 
-def readExcelFile(file_id):
-	try:
-		data = xlrd.open_workbook("T"+ str(file_id) + ".xls")
-	except:
-		print("Not found!")
-		return 0
+def readExcelFile(tc, t_init_for_file, size):
+    try:
+        data = xlrd.open_workbook("sample_case_proc/R%02d/T%02d/%04d/data.xls" % (size, t_init_for_file, tc), formatting_info=True)
+    except:
+        print("Not found!")
+        return 0
 
-	table = data.sheets()
-	total_T_avg = 0
-	T_avg = 0
-	# Loop thought sheet
-	for sheet in table:
-		T_values = list(map(float, sheet.col_values(3)[1:]))
-		total_T_avg += sum(T_values)
-		T_avg = total_T_avg / len(T_values)
-	return file_id, T_avg
+    start_time = time.time()
+    book = xlrd.open_workbook("sample_case_proc/R%02d/R%02dT%02ddata.xls" % (size, size, t_init_for_file))
+    if ("%04d" % tc) in book.sheet_names():
+        #print("Skipped tc:{} R:{} T:{}\nRun on processer {}\n".format((tc, size, t_init_for_file / 100, mp.current_process())))
+        return 0
 
-index = []
-ls = []
-for i in range(10, 36, 5):
-	idx, t_value = readExcelFile(i)
-	index.append(idx)
-	ls.append(t_value)
+    wb = xl_copy(book)
+    sheet1 = wb.add_sheet("%04d" % tc)
+    sheet1.write(0, 0, "Round")
+    sheet1.write(0, 1, "AverageAll_energy") 
+    sheet1.write(0, 2, "Size")
+    sheet1.write(0, 3, "T")
+    sheet1.write(0, 4, "No Pointer node")
+    table = data.sheets()
+    # Loop thought sheet
+    for sheet in table:
+        left_node = sheet.col_values(0)
+        E_avg = sheet.col_values(1)
+        Size_avg = sheet.col_values(2)
+        T_avg = sheet.col_values(3)#[1:]
+        ignore_node = sheet.col_values(4)#[1:]
 
-plt.plot(index, ls)
-plt.xlabel('T init')
-plt.ylabel('T Values')
-plt.title("T Average for each T initial")
-plt.show()
-plt.savefig('sample_case_proc/T_avg_graph', dpi=300)
-plt.clf()
+    for rnd in range(1, len(left_node)):
+        sheet1.write(rnd, 0, left_node[rnd])
+        sheet1.write(rnd, 1, E_avg[rnd])
+        sheet1.write(rnd, 2, Size_avg[rnd])
+        sheet1.write(rnd, 3, T_avg[rnd])
+        sheet1.write(rnd, 4, ignore_node[rnd])
+    path = "sample_case_proc/R%02d/R%02dT%02ddata.xls" % (size, size, t_init_for_file)
+    wb.save(path)
+    print("Processing at testcase {} which set initial radius at {} and T value at {}\nfinished within time {} s.\nRunning on processer {}\n".format(tc, size, t_init_for_file / 100, time.time() - start_time, mp.current_process()))
+    #return file_id, T_avg
+
+def main():
+    if __name__ == "__main__":
+        pool = mp.Pool(4)
+        '''
+        for size in range(40, 81, 5):
+            for t_initial in range(10, 81, 5):
+                for testcase in range(1, 101):
+                    readExcelFile(size, t_initial, testcase)
+        '''
+        pool.starmap(readExcelFile, product(range(1, 101), range(10, 81, 5), range(10, 41, 5)))
+
+main()
+
