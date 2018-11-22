@@ -1,4 +1,4 @@
-# Project for ajarn Cho
+# A Fuzzy-based Distributed Re-Clustering Solution for Wireless Sensor Networks
 
 Please install python library
 ```python
