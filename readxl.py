@@ -17,12 +17,16 @@ def readExcelFile(tc, t_init_for_file, size):
         return 0
 
     start_time = time.time()
-    book = xlrd.open_workbook("sample_case_proc/R%02d/R%02dT%02ddata.xls" % (size, size, t_init_for_file))
-    if ("%04d" % tc) in book.sheet_names():
-        #print("Skipped tc:{} R:{} T:{}\nRun on processer {}\n".format((tc, size, t_init_for_file / 100, mp.current_process())))
-        return 0
-
-    wb = xl_copy(book)
+    try:
+        book = xlrd.open_workbook("sample_case_proc/R%02d/R%02dT%02ddata.xls" % (size, size, t_init_for_file))
+        if ("%04d" % tc) in book.sheet_names():
+            #print("Skipped tc:{} R:{} T:{}\nRun on processer {}\n".format((tc, size, t_init_for_file / 100, mp.current_process())))
+            return 0
+        wb = xl_copy(book)
+    except:
+        book = xlwt.Workbook(encoding="utf-8")
+        wb = book
+    
     sheet1 = wb.add_sheet("%04d" % tc)
     sheet1.write(0, 0, "Round")
     sheet1.write(0, 1, "AverageAll_energy") 
