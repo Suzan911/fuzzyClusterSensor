@@ -30,8 +30,8 @@ class Field:
         self.nodeCH = []
 
         self.createNode(-50, 50, 'BS')
-        for _ in range(int(self._density * self._size**2)):
-            self.createNode(np.random.rand() * size, np.random.rand() * size, 'CM', t=t)
+        for i in range(1, int(self._density * self._size**2) + 1):
+            self.createNode(np.random.rand() * size, np.random.rand() * size, 'CM', t=t, name="Node_%d" % i)
         # self.updateDistance() // Feature
 
     def getSize(self):
@@ -58,7 +58,7 @@ class Field:
         """
         return self._radius
 
-    def createNode(self, x, y, nodetype='CM', t=0.2):
+    def createNode(self, x, y, nodetype='CM', t=0.2, name='node'):
         """
         Create new nodes
         and store it in list which have 2 element
@@ -70,7 +70,7 @@ class Field:
             nodetype (str): Node type
             t      (float): T chance
         """
-        self.nodeList.append(Node(x, y, energy=self._start_energy + 0.01 * np.random.rand() * (1 if np.random.rand() < 0.5 else - 1), nodetype=nodetype, t=t))
+        self.nodeList.append(Node(x, y, energy=self._start_energy + 0.01 * np.random.rand() * (1 if np.random.rand() < 0.5 else - 1), nodetype=nodetype, t=t, name=name))
 
     def deleteNode(self, node):
         """
