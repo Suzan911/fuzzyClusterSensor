@@ -41,6 +41,14 @@ class Node:
         """
         self.__distance_node = dict()
 
+    def getName(self):
+        """
+        Get name of node
+        Return
+            Node name
+        """
+        return self.__name
+
     def getPosition(self):
         """
         Get positions of node

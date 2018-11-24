@@ -188,15 +188,12 @@ def cluster_confirmation_phase(field):
         for node in field.getNodes('CH'):
             del node
     
-    '''
-    Plot graph
-    
-    #print("# Node left in field (assume that we finish):", len(field.getNodes()))
+    # print("# Node left in field (assume that we finish):", len(field.getNodes()))
     # Plot graph to simulate environments
     for node in field.getNodes('CH'):
         for member in node.getPointerNode():
             plt.plot([node.getX(), member.getX()], [node.getY(), member.getY()], color='r', alpha=0.7, linewidth=0.8)
-    '''
+
 
 def standyPhase(field):
     """
@@ -287,34 +284,44 @@ def running(tc, t_init, size):
     book = xlwt.Workbook(encoding="utf-8")
     print("Processing in testcase {} which set initial radius at {}, density at {} and T value at {}.\nRunning on processer {}\n".format(tc, field_radius, density, t_init, mp.current_process()))
 
+    field = Field(100, density, radius=field_radius, start_energy=3, t=t_init)
+    left_node = [int(field.getDensity() * int(field.getSize())**2)]
+    t_avg_per_round = []
+    e_avg_per_round = []
+    r_avg_per_round = []
+    
     sheet1 = book.add_sheet("%04d" % tc)
     sheet1.write(0, 0, "Round")
     sheet1.write(0, 1, "AverageAll_energy") 
     sheet1.write(0, 2, "Size")
     sheet1.write(0, 3, "T")
     sheet1.write(0, 4, "No Pointer node")
+    
+    for index, node in enumerate(field.getNodes(), start=1):
+        sheet1.write(0, 4 + 2 * index - 1, node.getName())
+        sheet1.write(0, 4 + 2 * index, "Energy")
 
-    field = Field(100, density, radius=field_radius, start_energy=3, t=t_init)
-    left_node = [int(field.getDensity() * int(field.getSize())**2)]
-    t_avg_per_round = []
-    e_avg_per_round = []
-    r_avg_per_round = []
     ignore_node = []
     while len(field.getNodes()) >= (field.getDensity() * field.getSize()**2):
         CCH_election_phase(field, t_init)
         CH_competition_phase(field, field_radius)
         cluster_announcement_phase(field, field_radius)
-        ignore_node = len(list(filter(lambda x: not x.hasPointerNode(), field.getNodes('CM'))))
-        #field.printField(testcase=tc, showplot=0, rnd=rnd)
-        
+
         # Data storage
         rnd = field.getRound()
         nodes = field.getNodes()
         CH_nodes = field.getNodes('CH')
+        ignore_node = len(list(filter(lambda x: not x.hasPointerNode(), field.getNodes('CM'))))
         left_node.append(len(field.getNodes()))
-        E_avg = (np.sum([n.getAverageAll_energy() for n in CH_nodes]) / len(CH_nodes)) if len(CH_nodes) else 0
+        E_avg = (np.sum([n.getEnergy() for n in nodes]) / len(nodes)) if len(nodes) else 0
         Size_avg = (np.sum([n.getSize() for n in CH_nodes]) / len(CH_nodes)) if len(CH_nodes) else 0
         T_avg = (np.sum([n.getT() for n in nodes]) / len(nodes)) if len(nodes) else 0
+        field.printField(testcase=tc, showplot=0, rnd=rnd)
+        
+        # to do
+        for index, node in enumerate(field.getNodes(), start=1):
+            sheet1.write(rnd, 4 + 2 * index - 1, node.getName())
+            sheet1.write(rnd, 4 + 2 * index, "Energy")
 
         e_avg_per_round.append(E_avg)
         r_avg_per_round.append(Size_avg)
@@ -346,18 +353,12 @@ def running(tc, t_init, size):
     # plt.show()
     plt.savefig("sample_case_proc/T%04d/%04d" % (t_init, testcase), dpi=300)
     plt.clf()
-<<<<<<< HEAD
-    
-
-    plt.plot(list(range(len(t_avg_per_round))), t_avg_per_round)
-=======
     '''
     t_avg_case = np.sum(t_avg_per_round) / len(t_avg_per_round)
     e_avg_case = np.sum(e_avg_per_round) / len(e_avg_per_round)
     r_avg_case = np.sum(r_avg_per_round) / len(r_avg_per_round)
     plt.plot(list(range(len(t_avg_per_round))), t_avg_per_round, linewidth=0.7, alpha=0.7)
     plt.plot([0, len(t_avg_per_round)], [t_avg_case, t_avg_case], color='red')
->>>>>>> db3f55475cc55a88f472e7cdd9a93e02822ebe6c
     plt.xlabel('Round')
     plt.ylabel('T')
     plt.title("T Average per round")
@@ -381,14 +382,9 @@ def running(tc, t_init, size):
     plt.title("Size Cluster Average per round")
     # plt.show()
     plt.savefig("sample_case_proc/R%02d/T%02d/%04d/size_avg" % (size, t_init_for_file, tc), dpi=300)
-<<<<<<< HEAD
-    plt.clf()
-    '''
-=======
     plt.clf()    
     
->>>>>>> db3f55475cc55a88f472e7cdd9a93e02822ebe6c
-    del field
+    #del field
 
     time_used = time.time() - start_time
     sheet1.write(0, 5, "Time used: %f" % time_used)
@@ -398,12 +394,7 @@ def running(tc, t_init, size):
 def main():
     if __name__ == "__main__":
         pool = mp.Pool(4)
-<<<<<<< HEAD
-        # Running thought T value for each 100 testcase
-        pool.starmap(running, product(range(1, 101), range(10, 81, 5), range(40, 81, 5))) # product(testcase, t-initial, size)
-=======
         # Running thought R value and T value by each 100 testcase
-        pool.starmap(running, product(range(1, 101), range(10, 81, 5), range(45, 81, 5))) # product(testcase, t-initial, size)
->>>>>>> db3f55475cc55a88f472e7cdd9a93e02822ebe6c
+        pool.starmap(running, product(range(1, 11), range(5, 6, 5), range(10, 11, 5))) # product(testcase, t-initial, size)
 
 main()

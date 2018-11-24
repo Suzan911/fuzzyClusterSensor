@@ -167,19 +167,6 @@ def cluster_confirmation_phase(field):
         for member in members:
             member.consume_receive()
             member.updateSize()
-            # Cluster member adjust T-value (Fuzzy Algorithm)
-            new_t = adjustment_T_value(field, member)
-
-        # Cluster Header
-        '''
-        size = node.getSize()
-        member_list = node.getPointerNode()
-        residual_energy = node.getResidualEnergy()
-        avg_CM_energy = node.getAverageCM_energy()
-        avg_energy = node.getAverageAll_energy()
-        '''
-        # Cluster Header adjust T-value (Fuzzy Algorithm)
-        numT.append(adjustment_T_value(field, node))
 
         if node.getEnergy() <= 0:
             field.deleteNode(node)
@@ -209,54 +196,6 @@ def standyPhase(field):
         node.consume_Eproc(len(node.getPointerNode()) + 1)
         node.consume_transmit(node.getDistanceFromNode(field.getBaseStation()))
 
-
-def Fuzzy(node_energy, avg_energy, cluster_size, init_radius):
-    """
-    Fuzzy algorithms
-    """
-    energy = node_energy / avg_energy
-    High = max(0, min(1,(1-(1.1 - energy)/0.1))) if energy >= 1 else 0
-    MidHigh = max(0, min(1,(1.1 - energy)/0.1)) if energy >= 1 else 0
-    MidLow = max(0, min(1,(energy - 0.9)/0.1)) if energy <= 1 else 0
-    Low = max(0, min(1,((1-(energy - 0.9)/0.1)))) if energy <= 1 else 0
-    #print(energy, High, MidHigh, MidLow, Low)
-
-    #print((1-((Cluster_size - 0.9))/0.1) ,(Cluster_size - 0.9)/0.1, Cluster_size, deployed_Cluster)
-    size = cluster_size / init_radius
-    Large = max(0, min(1, (1-(1.1 - size)/0.1))) if size >= 1 else 0
-    MidLarge = max(0, min(1, (1.1 - size)/0.1)) if size >= 1 else 0
-    MidSmall = max(0, min(1, (size - 0.9)/0.1)) if size <= 1 else 0
-    Small = max(0, min(1, (1-((size - 0.9))/0.1))) if size <= 1 else 0
-    #print(size, Large, MidLarge, MidSmall, Small)
-
-    rules = [min(High, Large), min(High, MidLarge), min(MidHigh, Large), min(MidHigh, MidLarge), 
-             min(MidLow, Large), min(MidLow, MidLarge), min(Low, Large), min(Low, MidLarge),
-             min(High, MidSmall), min(MidHigh, MidSmall), min(MidLow, MidSmall), min(Low, MidSmall),
-             min(High, Small), min(MidHigh, Small), min(MidLow, Small), min(Low, Small)]
-    #print(rules)
-    
-    start_mid_t, T_value, count = 0.03125, 0, -1
-    for i in rules:
-        weight = i * start_mid_t
-        T_value += weight
-        count = count + i if weight and count >= 0 else i if weight else count
-        start_mid_t += 0.0625
-    return T_value / count
-
-
-def adjustment_T_value(field, node):
-    """
-    T-Value adjustment
-    """
-    # Fuzzy algorithms
-    radius = field.getRadius()
-    value_G = Fuzzy(node.getEnergy(), node.getAverageAll_energy(), node.getSize(), radius)
-    if value_G <= 0.5:
-        new_T = node.getT() + 0.01*(0.5 - value_G)/0.5
-        node.setT(max(0.01, min(1, new_T)))
-    else:
-        new_T = node.getT() - 0.01*(value_G - 0.5)/0.5
-        node.setT(max(0.01, min(1, new_T)))
 
 # This is main
 def running(tc, t_init, size):
@@ -346,18 +285,12 @@ def running(tc, t_init, size):
     # plt.show()
     plt.savefig("sample_case_proc/T%04d/%04d" % (t_init, testcase), dpi=300)
     plt.clf()
-<<<<<<< HEAD
-    
-
-    plt.plot(list(range(len(t_avg_per_round))), t_avg_per_round)
-=======
     '''
     t_avg_case = np.sum(t_avg_per_round) / len(t_avg_per_round)
     e_avg_case = np.sum(e_avg_per_round) / len(e_avg_per_round)
     r_avg_case = np.sum(r_avg_per_round) / len(r_avg_per_round)
     plt.plot(list(range(len(t_avg_per_round))), t_avg_per_round, linewidth=0.7, alpha=0.7)
     plt.plot([0, len(t_avg_per_round)], [t_avg_case, t_avg_case], color='red')
->>>>>>> db3f55475cc55a88f472e7cdd9a93e02822ebe6c
     plt.xlabel('Round')
     plt.ylabel('T')
     plt.title("T Average per round")
@@ -381,13 +314,8 @@ def running(tc, t_init, size):
     plt.title("Size Cluster Average per round")
     # plt.show()
     plt.savefig("sample_case_proc/R%02d/T%02d/%04d/size_avg" % (size, t_init_for_file, tc), dpi=300)
-<<<<<<< HEAD
-    plt.clf()
-    '''
-=======
     plt.clf()    
     
->>>>>>> db3f55475cc55a88f472e7cdd9a93e02822ebe6c
     del field
 
     time_used = time.time() - start_time
@@ -398,12 +326,7 @@ def running(tc, t_init, size):
 def main():
     if __name__ == "__main__":
         pool = mp.Pool(4)
-<<<<<<< HEAD
-        # Running thought T value for each 100 testcase
-        pool.starmap(running, product(range(1, 101), range(10, 81, 5), range(40, 81, 5))) # product(testcase, t-initial, size)
-=======
         # Running thought R value and T value by each 100 testcase
         pool.starmap(running, product(range(1, 101), range(10, 81, 5), range(45, 81, 5))) # product(testcase, t-initial, size)
->>>>>>> db3f55475cc55a88f472e7cdd9a93e02822ebe6c
 
 main()
