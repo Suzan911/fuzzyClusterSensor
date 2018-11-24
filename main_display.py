@@ -299,6 +299,7 @@ def running(tc, t_init, size):
     
     for index, node in enumerate(field.getNodes(), start=1):
         sheet1.write(0, 4 + 2 * index - 1, node.getName())
+        sheet1.write(1, 4 + 2 * index - 1, "Pos: (%.2f, %.2f)" % node.getPosition())
         sheet1.write(0, 4 + 2 * index, "Energy")
 
     ignore_node = []
@@ -313,15 +314,15 @@ def running(tc, t_init, size):
         CH_nodes = field.getNodes('CH')
         ignore_node = len(list(filter(lambda x: not x.hasPointerNode(), field.getNodes('CM'))))
         left_node.append(len(field.getNodes()))
-        E_avg = (np.sum([n.getEnergy() for n in nodes]) / len(nodes)) if len(nodes) else 0
+        E_avg = (np.sum([n.getAverageAll_energy() for n in CH_nodes]) / len(CH_nodes)) if len(CH_nodes) else 0
         Size_avg = (np.sum([n.getSize() for n in CH_nodes]) / len(CH_nodes)) if len(CH_nodes) else 0
         T_avg = (np.sum([n.getT() for n in nodes]) / len(nodes)) if len(nodes) else 0
         field.printField(testcase=tc, showplot=0, rnd=rnd)
         
         # to do
         for index, node in enumerate(field.getNodes(), start=1):
-            sheet1.write(rnd, 4 + 2 * index - 1, node.getName())
-            sheet1.write(rnd, 4 + 2 * index, "Energy")
+            #sheet1.write(rnd, 4 + 2 * index - 1, node.getName())
+            sheet1.write(rnd, 4 + 2 * index, node.getEnergy())
 
         e_avg_per_round.append(E_avg)
         r_avg_per_round.append(Size_avg)
@@ -387,7 +388,8 @@ def running(tc, t_init, size):
     #del field
 
     time_used = time.time() - start_time
-    sheet1.write(0, 5, "Time used: %f" % time_used)
+    sheet1.write(rnd + 1, 0, "Time used:")
+    sheet1.write(rnd + 1, 1, time_used)
     book.save("sample_case_proc/R%02d/T%02d/%04d/data.xls" % (size, t_init_for_file, tc))
     print("Processing at testcase {} which set initial radius at {}, density at {} and T value at {}.\nfinished within time {}s.\nRunning on processer {}\n".format(tc, field_radius, density, t_init, time_used, mp.current_process()))
 
@@ -395,6 +397,6 @@ def main():
     if __name__ == "__main__":
         pool = mp.Pool(4)
         # Running thought R value and T value by each 100 testcase
-        pool.starmap(running, product(range(1, 11), range(5, 6, 5), range(10, 11, 5))) # product(testcase, t-initial, size)
+        pool.starmap(running, product(range(1, 6), range(5, 6, 5), range(10, 11, 5))) # product(testcase, t-initial, size)
 
 main()
