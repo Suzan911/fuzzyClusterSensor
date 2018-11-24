@@ -327,6 +327,6 @@ def main():
     if __name__ == "__main__":
         pool = mp.Pool(4)
         # Running thought R value and T value by each 100 testcase
-        pool.starmap(running, product(range(1, 101), range(10, 81, 5), range(45, 81, 5))) # product(testcase, t-initial, size)
+        pool.starmap(running, product(range(1, 101), [10, 50, 90], range(45, 81, 5))) # product(testcase, t-initial, size)
 
 main()
