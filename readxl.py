@@ -1,3 +1,4 @@
+
 import xlrd
 import xlwt
 import os
@@ -11,7 +12,8 @@ from xlutils.copy import copy as xl_copy
 
 def readExcelFile(tc, t_init_for_file, size):
     try:
-        data = xlrd.open_workbook("sample_case_proc/R%02d/T%02d/%04d/data.xls" % (size, t_init_for_file, tc), formatting_info=True)
+        path = "sample_case_proc/R%02d/T%02d/%04d/data.xls" % (size, t_init_for_file, tc)
+        data = xlrd.open_workbook(path, formatting_info=True)
     except:
         print("Not found!")
         return 0
@@ -26,7 +28,8 @@ def readExcelFile(tc, t_init_for_file, size):
     except:
         book = xlwt.Workbook(encoding="utf-8")
         wb = book
-    
+
+    start_time = time.time()
     sheet1 = wb.add_sheet("%04d" % tc)
     sheet1.write(0, 0, "Round")
     sheet1.write(0, 1, "AverageAll_energy") 
@@ -58,4 +61,3 @@ def main():
         pool.starmap(readExcelFile, product(range(1, 101), range(10, 81, 5), range(10, 81, 5)))
 
 main()
-

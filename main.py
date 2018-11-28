@@ -346,12 +346,18 @@ def running(tc, t_init, size):
     # plt.show()
     plt.savefig("sample_case_proc/T%04d/%04d" % (t_init, testcase), dpi=300)
     plt.clf()
+<<<<<<< HEAD
+    
+
+    plt.plot(list(range(len(t_avg_per_round))), t_avg_per_round)
+=======
     '''
     t_avg_case = np.sum(t_avg_per_round) / len(t_avg_per_round)
     e_avg_case = np.sum(e_avg_per_round) / len(e_avg_per_round)
     r_avg_case = np.sum(r_avg_per_round) / len(r_avg_per_round)
     plt.plot(list(range(len(t_avg_per_round))), t_avg_per_round, linewidth=0.7, alpha=0.7)
     plt.plot([0, len(t_avg_per_round)], [t_avg_case, t_avg_case], color='red')
+>>>>>>> db3f55475cc55a88f472e7cdd9a93e02822ebe6c
     plt.xlabel('Round')
     plt.ylabel('T')
     plt.title("T Average per round")
@@ -375,8 +381,13 @@ def running(tc, t_init, size):
     plt.title("Size Cluster Average per round")
     # plt.show()
     plt.savefig("sample_case_proc/R%02d/T%02d/%04d/size_avg" % (size, t_init_for_file, tc), dpi=300)
+<<<<<<< HEAD
+    plt.clf()
+    '''
+=======
     plt.clf()    
     
+>>>>>>> db3f55475cc55a88f472e7cdd9a93e02822ebe6c
     del field
 
     time_used = time.time() - start_time
@@ -387,7 +398,12 @@ def running(tc, t_init, size):
 def main():
     if __name__ == "__main__":
         pool = mp.Pool(4)
+<<<<<<< HEAD
+        # Running thought T value for each 100 testcase
+        pool.starmap(running, product(range(1, 101), range(10, 81, 5), range(40, 81, 5))) # product(testcase, t-initial, size)
+=======
         # Running thought R value and T value by each 100 testcase
         pool.starmap(running, product(range(1, 101), range(10, 81, 5), range(45, 81, 5))) # product(testcase, t-initial, size)
+>>>>>>> db3f55475cc55a88f472e7cdd9a93e02822ebe6c
 
 main()
