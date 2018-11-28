@@ -51,18 +51,11 @@ def readExcelFile(tc, t_init_for_file, size):
     path = "sample_case_proc/R%02d/R%02dT%02ddata.xls" % (size, size, t_init_for_file)
     wb.save(path)
     print("Processing at testcase {} which set initial radius at {} and T value at {}\nfinished within time {} s.\nRunning on processer {}\n".format(tc, size, t_init_for_file / 100, time.time() - start_time, mp.current_process()))
-    #return file_id, T_avg
 
 def main():
     if __name__ == "__main__":
         pool = mp.Pool(4)
-        '''
-        for size in range(40, 81, 5):
-            for t_initial in range(10, 81, 5):
-                for testcase in range(1, 101):
-                    readExcelFile(size, t_initial, testcase)
-        '''
-        pool.starmap(readExcelFile, product(range(1, 101), range(10, 81, 5), range(10, 41, 5)))
+        pool.starmap(readExcelFile, product(range(1, 101), range(10, 81, 5), range(10, 81, 5)))
 
 main()
 
