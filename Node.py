@@ -170,6 +170,8 @@ class Node:
         if self.getType() == 'CH' and self.hasPointerNode():
             size = max(list(map(lambda x: self.getDistanceFromNode(x), self.getPointerNode())))
             self.__size = size
+        elif self.getType() == 'CH':
+            self.__size = 0
         elif self.getType() == 'CM':
             size = self.getPointerNode().getSize()
             self.__size = size
@@ -300,31 +302,38 @@ class Node:
         a data packet of >Ld< bit size and >Eelec< is the
         constant factor of energy in transmitter and receiver
         circuitry
-        """
+        
         eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics
         ld = 4000
-        self.setEnergy(self.getEnergy() - eelec*ld)
+        """
+        self.setEnergy(self.getEnergy() - 0.0002) # eelec * ld = 50 * (10**(-9)) * 4000
 
-    def consume_transmit(self, d):
+    def consume_transmit(self, d, debug=0):
         """
         Energy used by a sensor to transmit >Ld< Bit
-        of data packet over a distance d. if d is less then
-        the threshold distance, d0, we ues terms of >Efs< as
+        of data packet over a distance d.
+        
+        If d is less then the threshold distance, d0, we ues terms of >Efs< as
         the constant factors of energy in a free-space conmdition.
-        when d is greter thne or equal to d0, we use terms of >Emp<
+        when d is greater then or equal to d0, we use terms of >Emp<
         for a multi-path fading condition.
         Args:
-            d (float): Distance
+            d   (float): Distance
+            debug (int): Debug
         """
         eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics
         ld = 4000 #Length of data packet
         efs = 10**-12   #Energy dissipation of transmitter amplifier in Friis free space
-        emp = 0.0013*(10**-(12)) #Energy dissipation of data aggregation
+        emp = 0.0013*(10**(-12)) #Energy disipation of data aggregation
         dzero = 87
         if d < dzero:
             energy = ld * (eelec + efs * d**2)
+            if debug:
+                print(' +', end=' ')
         else:
             energy= ld * (eelec + emp * d**4)
+            if debug:
+                print(' -', end=' ')
         self.setEnergy(self.getEnergy() - energy)
 
     def consume_Eproc(self, amount_nodes):

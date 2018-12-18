@@ -182,7 +182,7 @@ class Field:
         plt.title("Field")
         plt.legend(loc=0)
         if rnd:
-            plt.savefig("sample_case_proc/R%02d/T%02d/%04d/%04d" % (self.getRadius(), (self._t * 100), testcase, rnd), dpi=300)
+            plt.savefig("sample_case_proc/R%02d/T%02d/%04d/%04d" % (self.getRadius(), (self._t * 100), testcase, rnd), dpi=72)
         if showplot:
             plt.show()
         plt.clf()
