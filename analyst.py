@@ -9,16 +9,17 @@ import matplotlib.pyplot as plt
 import matplotlib.markers as mark
 import multiprocessing as mp
 import numpy as np
+import config
 from itertools import product
 from xlutils.copy import copy as xl_copy
 
-def analyst(size, t_init):
+def analyst(t_init, size):
     T_avg = 0
     SOP_avg = 0
     Size_avg = 0
     start_time = time.time()
     try:
-        data = xlrd.open_workbook("sample_case_proc/R%02d/R%02dT%02ddata.xls" % (size, size, t_init))
+        data = xlrd.open_workbook(config.root + "/R%02d/R%02dT%02ddata.xls" % (size, size, t_init))
     except:
         return
 
@@ -53,7 +54,7 @@ def analyst(size, t_init):
     plt.title("T avg R=%02d T=%.2f" % (size, t_init / 100))
     plt.legend(loc=0)
     #plt.show()
-    plt.savefig("sample_case_proc/R%02d/R%02dT%02d_T_avg" % (size, size, t_init), dpi=300)
+    plt.savefig(config.root + "/R%02d/R%02dT%02d_T_avg" % (size, size, t_init), dpi=300)
     plt.clf()
 
     ''' Cluster Size avg by size '''
@@ -64,7 +65,7 @@ def analyst(size, t_init):
     plt.title("Cluster size avg R=%02d T=%.2f" % (size, t_init / 100))
     plt.legend(loc=0)
     #plt.show()
-    plt.savefig("sample_case_proc/R%02d/R%02dT%02d_Size_avg" % (size, size, t_init), dpi=300)
+    plt.savefig(config.root + "/R%02d/R%02dT%02d_Size_avg" % (size, size, t_init), dpi=300)
     plt.clf()
 
     ''' SOP by size '''
@@ -75,7 +76,7 @@ def analyst(size, t_init):
     plt.title("SOP avg R=%02d T=%.2f" % (size, t_init / 100))
     plt.legend(loc=0)
     #plt.show()
-    plt.savefig("sample_case_proc/R%02d/R%02dT%02d_SOP_avg" % (size, size, t_init), dpi=300)
+    plt.savefig(config.root + "/R%02d/R%02dT%02d_SOP_avg" % (size, size, t_init), dpi=300)
     plt.clf()
 
     print(T_avg, SOP_avg, Size_avg)
@@ -84,14 +85,24 @@ def analyst(size, t_init):
 
 def main():
     if __name__ == "__main__":
-        pool = mp.Pool(4)
-        '''
-        for size in range(40, 81, 5):
-            for t_initial in range(10, 81, 5):
-                for testcase in range(1, 101):
-                    readExcelFile(size, t_initial, testcase)
-        '''
-        pool.starmap(analyst, product(range(10, 81, 5), range(10, 81, 5))) # size, t_init
+        """
+        Initial Value
+        """
+        testcase = [0]#config.testcase
+        t_initial = config.t_ini
+        size = config.size
+
+        """
+        Check remaining testcase that not generate
+        """
+        # to-do
+
+        """
+        Running
+        """
+        pool = mp.Pool(8)
+        # Running thought T value for each 100 testcase
+        pool.starmap(analyst, product(t_initial, size)) # product(testcase, t-initial, size)
 
 main()
 

@@ -159,6 +159,14 @@ class Node:
         """
         return self.__size
 
+    def setSize(self, size):
+        """
+        Set size of Cluster node
+        Args:
+            size (float): Size
+        """
+        self.__size = size
+
     def updateSize(self):
         """
         Update size of node if this node is Cluster Header Node
@@ -169,13 +177,13 @@ class Node:
         size = 0
         if self.getType() == 'CH' and self.hasPointerNode():
             size = max(list(map(lambda x: self.getDistanceFromNode(x), self.getPointerNode())))
-            self.__size = size
+            self.setSize(size)
         elif self.getType() == 'CH':
-            self.__size = 0
+            self.setSize(0)
         elif self.getType() == 'CM':
             size = self.getPointerNode().getSize()
-            self.__size = size
-        return self.__size
+            self.setSize(size)
+        return self.getSize()
 
     def getDistanceFromNode(self, node):
         """
@@ -296,19 +304,17 @@ class Node:
         efs = 10**-12                   # Energy dissipation of transmitter amplifier in Friis free space
         emp = 0.0013*(10**-(12))        # Energy dissipation of data aggregation
     """
-    def consume_receive(self):
+    def consume_receive(self, packet_size):
         """
         Erx is the energy used by a sensor to receive
-        a data packet of >Ld< bit size and >Eelec< is the
+        a data packet of >packet_size< bit size and >Eelec< is the
         constant factor of energy in transmitter and receiver
         circuitry
-        
-        eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics
-        ld = 4000
         """
-        self.setEnergy(self.getEnergy() - 0.0002) # eelec * ld = 50 * (10**(-9)) * 4000
+        eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics        
+        self.setEnergy(self.getEnergy() - eelec * packet_size) # eelec * ld = 50 * (10**(-9)) * 4000
 
-    def consume_transmit(self, d, debug=0):
+    def consume_transmit(self, packet_size, d, debug=0):
         """
         Energy used by a sensor to transmit >Ld< Bit
         of data packet over a distance d.
@@ -322,7 +328,7 @@ class Node:
             debug (int): Debug
         """
         eelec = 50*(10**(-9)) #Energy dissipation of transmitter & receiver electronics
-        ld = 4000 #Length of data packet
+        ld = packet_size #Length of data packet
         efs = 10**-12   #Energy dissipation of transmitter amplifier in Friis free space
         emp = 0.0013*(10**(-12)) #Energy disipation of data aggregation
         dzero = 87

@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.markers as mark
 import matplotlib.patches as patches
+import config
 from Node import Node
 
 class Field:
@@ -101,7 +102,7 @@ class Field:
             return list(filter(lambda x: x.getType() == nodetype, nodeList))
         return nodeList
 
-    def getNearbyNodes(self, node, radius, nodetype='none'):
+    def getNearbyNodes(self, node, radius, nodetype='none', debug=0):
         """
         Get nearby node which in radius of input node
         Args:
@@ -112,6 +113,12 @@ class Field:
             List of nearby nodes
         """
         nearbyNodes = list(filter(lambda x: node.getDistanceFromNode(x) <= radius and node != x, self.getNodes(nodetype)))
+        if debug:
+            print(radius, end=' ')
+            if any(map(lambda x, n=node, r=radius: x.getDistanceFromNode(n) > radius, nearbyNodes)):
+                print('bug found --')
+            else:
+                print()
         return nearbyNodes
 
     def updateNodes(self, nodeList):
@@ -153,6 +160,7 @@ class Field:
             node.setType('CM')
             node.setDelay(0)
             node.setState('active')
+            node.setSize(0)
             node.clearPointerNode()
             node.clearPackets()
         plt.clf()
@@ -182,7 +190,7 @@ class Field:
         plt.title("Field")
         plt.legend(loc=0)
         if rnd:
-            plt.savefig("sample_case_proc/R%02d/T%02d/%04d/%04d" % (self.getRadius(), (self._t * 100), testcase, rnd), dpi=72)
+            plt.savefig(config.root + "/R%02d/T%02d/%04d/%04d" % (self.getRadius(), (self._t * 100), testcase, rnd), dpi=72)
         if showplot:
             plt.show()
         plt.clf()

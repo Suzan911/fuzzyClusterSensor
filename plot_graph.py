@@ -9,13 +9,14 @@ import matplotlib.pyplot as plt
 import matplotlib.markers as mark
 import multiprocessing as mp
 import numpy as np
+import config
 from itertools import product
 from xlutils.copy import copy as xl_copy
 
 def get_avg_sop(size, t_init):
     SOP_avg = 0
     try:
-        data = xlrd.open_workbook("sample_case_proc/R%02d/R%02dT%02ddata.xls" % (size, size, t_init))
+        data = xlrd.open_workbook(config.root + "/fuzzy/R%02d/R%02dT%02ddata.xls" % (size, size, t_init))
     except:
         return
 
@@ -28,21 +29,24 @@ def get_avg_sop(size, t_init):
 
 def main():
     if __name__ == "__main__":
-        sop = [[], [], []]
-        for r in range(45, 91, 5):
-            for index, t in enumerate([10, 50, 90]):
-                sop[index].append(get_avg_sop(r, t))
+        sop = []
+        for r in config.size:
+            SOP_avgs = []
+            for t in config.t_init:
+                value = get_avg_sop(r, t)
+                if value:
+                    SOP_avgs.append(value)
+            sop.append(np.sum(SOP_avgs) / len(SOP_avgs))
+        print(sop)
 
         ''' SOP by size '''
-        plt.plot(list(range(45, 91, 5)), sop[0], label='Fixed T=0.1', color="red")
-        plt.plot(list(range(45, 91, 5)), sop[1], label='Fixed T=0.5', color="green")
-        plt.plot(list(range(45, 91, 5)), sop[2], label='Fixed T=0.9', color="blue")
+        plt.plot(list(range(10, len(sop) * 5 + 1, 5)), sop[0], label='Fuzzy', color="red")
         plt.xlabel('R')
         plt.ylabel('Round')
-        plt.title("SOP fixed avg")
+        plt.title("SOP avg")
         plt.legend(loc=0)
         #plt.show()
-        plt.savefig("sample_case_proc/SOP_fixed_avg", dpi=300)
+        plt.savefig(config.root + "/SOP_avg", dpi=300)
         plt.clf()
 main()
 
