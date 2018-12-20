@@ -73,7 +73,7 @@ def main():
         Initial Value
         """
         testcase = [0]#config.testcase
-        t_initial = config.t_ini
+        t_initial = config.t_init
         size = config.size
 
         """
