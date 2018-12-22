@@ -27,19 +27,21 @@ def CCH_election_phase(field, t):
     """
     nodeList = field.getNodes()
     initEnergy = field.getInitEnergy()
-    count = 0
+    candidate_count = 0
     for node in nodeList:
         if np.random.rand() <= node.getT():
             node.setType('CCH')
             node.setDelay((initEnergy - node.getEnergy()) / initEnergy * 10) # delay
-            count += 1
+            candidate_count += 1
+        else:
+            node.setType('CM')
+            node.setState('sleep')
     # We wouldn't update nodes list because it already stored in object
     # field.updateNodes(nodeList)
-    #print("# Amount of Candidate Claster Header (CCH) in Phase 1 =", count)
-    return count
+    return candidate_count
 
 
-def CH_competition_phase(field, radius):
+def CH_competition_phase(field, radius, debug=0):
     """
     Phase 2
     CH Competition Phase
@@ -50,25 +52,35 @@ def CH_competition_phase(field, radius):
     Args:
         field  (Field): Field
         radius (float): Radius around CCH nodes
+        debug   (bool): Toggle debug mode
     """
     CCH_nodeList = sorted(field.getNodes('CCH'), key=lambda x: x.getDelay(), reverse=False)
+    if debug:
+        nodetype = {node: node.getType() for node in field.getNodes()}
+        received_list = {node: 0 for node in field.getNodes()}
     # Iterate thought remaining CCH node every iteraton
     # So we can graruntee that so we can get only CCH which doesn't sleep during this phase
     while len(CCH_nodeList):
         node = CCH_nodeList.pop(0)
-        node.setType('CH')
-        # Consume Energy for sended a packet
-        node.consume_transmit(200, radius)
-        for nearbyNode in field.getNearbyNodes(node, radius, 'CCH', debug=0):
-            # Consume Energy for received a packet
-            nearbyNode.consume_receive(200)
-            nearbyNode.setType('CM')
-            CCH_nodeList.remove(nearbyNode)
-        if node in CCH_nodeList:
-            CCH_nodeList.remove(node)
+        if node.getState() != 'sleep':
+            node.setType('CH')
+            # Consume Energy for sended a packet
+            node.consume_transmit(200, radius)
+            if debug:
+                received_list[node] += 1
+            for nearbyNode in field.getNearbyNodes(node, radius, 'CCH', debug=0):
+                # Consume Energy for received a packet
+                nearbyNode.consume_receive(200)
+                nearbyNode.setType('CM')
+                nearbyNode.setState('sleep')
+                if debug:
+                    received_list[nearbyNode] += 1
+                CCH_nodeList.remove(nearbyNode)
+    if debug:
+        return nodetype, received_list
 
 
-def cluster_announcement_phase(field, radius):
+def cluster_announcement_phase(field, radius, debug=0):
     """
     Phase 3
     Cluster Announcement Phase
@@ -78,13 +90,18 @@ def cluster_announcement_phase(field, radius):
     Args:
         field  (Field): Field
         radius (float): Radius around CH nodes
+        debug   (bool): Toggle debug mode
     """
     alpha_radius = math.sqrt(2 * math.log(10)) * radius
     CH_nodeList = field.getNodes('CH')
+    if debug:
+        received_list = {node: 0 for node in field.getNodes()}
     for node in CH_nodeList:
         # Consume Energy for sending a packet to CM with in radius]
         start_e = node.getEnergy()
         node.consume_transmit(200, alpha_radius)
+        if debug:
+            received_list[node] += 1
         for nearbyNode in field.getNearbyNodes(node, alpha_radius, 'CM', debug=0):
             # Consume Energy for receive a packet from CH
             nearbyNode.consume_receive(200)
@@ -95,6 +112,9 @@ def cluster_announcement_phase(field, radius):
                 nearbyNode.getPointerNode().removePointerNode(nearbyNode)
                 node.setPointerNode(nearbyNode)
                 nearbyNode.setPointerNode(node)
+            if debug:
+                received_list[nearbyNode] += 1
+
     # In case; CM can't find any CH node nearby, so we need to brute force find CH
     # Find CH node in length of diagonal of area radius
     '''
@@ -110,8 +130,9 @@ def cluster_announcement_phase(field, radius):
                 node.getPointerNode().removePointerNode(node)
                 node.setPointerNode(CH_node)
                 CH_node.setPointerNode(node)
-    ''' # Ignore for now
-    cluster_association_phase(field)
+    ''' # Ignored
+    if debug:
+        return received_list
 
 
 def cluster_association_phase(field):
@@ -138,10 +159,8 @@ def cluster_association_phase(field):
         node.updateSize()
         node.computeAverageEnergy()
 
-    cluster_confirmation_phase(field)
 
-
-def cluster_confirmation_phase(field):
+def cluster_confirmation_phase(field, is_fuzzy=False, plot_graph=False):
     """
     Phase 5
     Cluster Confirmation Phase
@@ -150,7 +169,6 @@ def cluster_confirmation_phase(field):
     and so it's should start process by sending data to BaseStation
     """
     nodeList, count = field.getNodes(), 0
-    numT = []
     for node in field.getNodes('CH'):
         # Energy consumptions at CH node
         # Create packet and sending to all CM which pointer to itself
@@ -159,9 +177,11 @@ def cluster_confirmation_phase(field):
             member.consume_receive(200)
             member.updateSize()
             # Cluster member adjust T-value (Fuzzy Algorithm)
-            new_t = adjustment_T_value(field, member)
+            if is_fuzzy:
+                adjustment_T_value(field, member)
         # Cluster Header adjust T-value (Fuzzy Algorithm)
-        numT.append(adjustment_T_value(field, node))
+        if is_fuzzy:
+            adjustment_T_value(field, node)
 
         if node.getEnergy() <= 0:
             field.deleteNode(node)
@@ -169,15 +189,14 @@ def cluster_confirmation_phase(field):
     if len(field.getNodes()) == 1:
         for node in field.getNodes('CH'):
             del node
-    
     '''
     Plot graph
-    #print("# Node left in field (assume that we finish):", len(field.getNodes()))
-    # Plot graph to simulate environments
-    for node in field.getNodes('CH'):
-        for member in node.getPointerNode():
-            plt.plot([node.getX(), member.getX()], [node.getY(), member.getY()], color='r', alpha=0.7, linewidth=0.8)
+    Plot graph to simulate environments
     '''
+    if plot_graph:
+        for node in field.getNodes('CH'):
+            for member in node.getPointerNode():
+                plt.plot([node.getX(), member.getX()], [node.getY(), member.getY()], color='r', alpha=0.7, linewidth=0.8)
 
 def standyPhase(field):
     """
@@ -237,3 +256,4 @@ def adjustment_T_value(field, node):
     else:
         new_T = node.getT() - 0.01*(value_G - 0.5)/0.5
         node.setT(max(0.01, min(1, new_T)))
+    return new_T

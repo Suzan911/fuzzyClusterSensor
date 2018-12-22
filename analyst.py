@@ -88,7 +88,6 @@ def main():
         """
         Initial Value
         """
-        testcase = [0]#config.testcase
         t_initial = config.t_init
         size = config.size
 
@@ -100,7 +99,7 @@ def main():
         """
         Running
         """
-        pool = mp.Pool(8)
+        pool = mp.Pool(config.pool)
         # Running thought T value for each 100 testcase
         pool.starmap(analyst, product(t_initial, size)) # product(testcase, t-initial, size)
 

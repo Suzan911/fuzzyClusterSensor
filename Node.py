@@ -282,12 +282,22 @@ class Node:
             self.__energy_all_avg = self.getEnergy()
     
     def getAverageCM_energy(self):
+        """
+        Get average of cluster energy (not including itself)
+        Return
+            Average of cluster energy
+        """
         if self.getType() == 'CH':
             return self.__energy_all_avg
         else:
             return self.getPointerNode().getAverageCM_energy()
 
     def getAverageAll_energy(self):
+        """
+        Get average of cluster energy
+        Return
+            Average of cluster energy
+        """
         if self.getType() == 'CH':
             return self.__energy_all_avg
         else:
