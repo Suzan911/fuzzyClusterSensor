@@ -98,48 +98,49 @@ def running(tc, t_init, size, is_fuzzy=True):
 
     while len(field.getNodes()) >= (field.getDensity() * field.getSize()**2):
         rnd = field.getRound()
+        _step = 15
         # Phase 1 :: Loop until have at least one CCH
         if phase.CCH_election_phase(field, t_init):
             # Running one setup phase
-            sheet_energy.write((rnd - 1) * 11 + 1, 0, rnd)
-            sheet_energy.write((rnd - 1) * 11 + 1, 1, "Current Energy")
+            sheet_energy.write((rnd - 1) * _step + 1, 0, rnd)
+            sheet_energy.write((rnd - 1) * _step + 1, 1, "Current Energy")
             for index, node in enumerate(field.getNodes(), start=1):
-                sheet_energy.write((rnd - 1) * 11 + 1, index + 2, energy_memo[node.getName()])
+                sheet_energy.write((rnd - 1) * _step + 1, index + 2, energy_memo[node.getName()])
 
             # Phase 2
             phase2_debug = phase.CH_competition_phase(field, field_radius, debug=1)
-            sheet_energy.write((rnd - 1) * 11 + 2, 1, "CH_competition_phase")
+            sheet_energy.write((rnd - 1) * _step + 2, 1, "CH_competition_phase")
             for index, node in enumerate(field.getNodes(), start=1):
                 before = energy_memo[node.getName()]
                 after = node.getEnergy()
-                sheet_energy.write((rnd - 1) * 11 + 2, index + 2, before - after)
+                sheet_energy.write((rnd - 1) * _step + 2, index + 2, before - after)
                 energy_memo[node.getName()] = after
 
             # Phase 3
             phase3_debug = phase.cluster_announcement_phase(field, field_radius, debug=1)
-            sheet_energy.write((rnd - 1) * 11 + 3, 1, "cluster_announcement_phase")
+            sheet_energy.write((rnd - 1) * _step + 3, 1, "cluster_announcement_phase")
             for index, node in enumerate(field.getNodes(), start=1):
                 before = energy_memo[node.getName()]
                 after = node.getEnergy()
-                sheet_energy.write((rnd - 1) * 11 + 3,  index + 2, before - after)
+                sheet_energy.write((rnd - 1) * _step + 3,  index + 2, before - after)
                 energy_memo[node.getName()] = after
 
             # Phase 4
-            phase.cluster_association_phase(field)
-            sheet_energy.write((rnd - 1) * 11 + 4, 1, "cluster_association_phase")
+            phase4_debug = phase.cluster_association_phase(field, debug=1)
+            sheet_energy.write((rnd - 1) * _step + 4, 1, "cluster_association_phase")
             for index, node in enumerate(field.getNodes(), start=1):
                 before = energy_memo[node.getName()]
                 after = node.getEnergy()
-                sheet_energy.write((rnd - 1) * 11 + 4, index + 2, before - after)
+                sheet_energy.write((rnd - 1) * _step + 4, index + 2, before - after)
                 energy_memo[node.getName()] = after
 
             # Phase 5
             phase.cluster_confirmation_phase(field, is_fuzzy=is_fuzzy, plot_graph=False)
-            sheet_energy.write((rnd - 1) * 11 + 5, 1, "cluster_confirmation_phase")
+            sheet_energy.write((rnd - 1) * _step + 5, 1, "cluster_confirmation_phase")
             for index, node in enumerate(field.getNodes(), start=1):
                 before = energy_memo[node.getName()]
                 after = node.getEnergy()
-                sheet_energy.write((rnd - 1) * 11 + 5, index + 2, before - after)
+                sheet_energy.write((rnd - 1) * _step + 5, index + 2, before - after)
                 energy_memo[node.getName()] = after
                 ignore_node = len(list(filter(lambda x: not x.hasPointerNode(), field.getNodes('CM'))))
 
@@ -165,22 +166,30 @@ def running(tc, t_init, size, is_fuzzy=True):
 
             for r in range(1, standy_loop + 1):
                 phase.standyPhase(field)
-                sheet_energy.write((rnd - 1) * 11 + 5 + r, 1, "Standy Phase %d" % r)
+                sheet_energy.write((rnd - 1) * _step + 5 + r, 1, "Standy Phase %d" % r)
                 for index, node in enumerate(field.getNodes(), start=1):
                     before = energy_memo[node.getName()]
                     after = node.getEnergy()
-                    sheet_energy.write((rnd - 1) * 11 + 5 + r, index + 2, before - after)
+                    sheet_energy.write((rnd - 1) * _step + 5 + r, index + 2, before - after)
                     energy_memo[node.getName()] = after
 
-            sheet_energy.write((rnd - 1) * 11 + 6 + r, 1, "Node type")
-            sheet_energy.write((rnd - 1) * 11 + 7 + r, 1, "Phase 2: Node Type")
-            sheet_energy.write((rnd - 1) * 11 + 8 + r, 1, "Phase 2: Node Connect")
-            sheet_energy.write((rnd - 1) * 11 + 9 + r, 1, "Phase 3: Node Connect") 
+            sheet_energy.write((rnd - 1) * _step + 6 + r, 1, "Node type")
+            sheet_energy.write((rnd - 1) * _step + 7 + r, 1, "Phase 2: Node Type")
+            sheet_energy.write((rnd - 1) * _step + 8 + r, 1, "Phase 2: Sending")
+            sheet_energy.write((rnd - 1) * _step + 9 + r, 1, "Phase 2: Receiving")
+            sheet_energy.write((rnd - 1) * _step + 10 + r, 1, "Phase 3: Sending")
+            sheet_energy.write((rnd - 1) * _step + 11 + r, 1, "Phase 3: Receiving")
+            sheet_energy.write((rnd - 1) * _step + 12 + r, 1, "Phase 4: Sending")
+            sheet_energy.write((rnd - 1) * _step + 13 + r, 1, "Phase 4: Receiving")
             for index, node in enumerate(field.getNodes(), start=1):
-                sheet_energy.write((rnd - 1) * 11 + 6 + r, index + 2, node.getType())
-                sheet_energy.write((rnd - 1) * 11 + 7 + r, index + 2, phase2_debug[0][node])
-                sheet_energy.write((rnd - 1) * 11 + 8 + r, index + 2, phase2_debug[1][node])
-                sheet_energy.write((rnd - 1) * 11 + 9 + r, index + 2, phase3_debug[node])
+                sheet_energy.write((rnd - 1) * _step + 6 + r, index + 2, node.getType())
+                sheet_energy.write((rnd - 1) * _step + 7 + r, index + 2, phase2_debug[0][node])
+                sheet_energy.write((rnd - 1) * _step + 8 + r, index + 2, phase2_debug[1][node][0])
+                sheet_energy.write((rnd - 1) * _step + 9 + r, index + 2, phase2_debug[1][node][1])
+                sheet_energy.write((rnd - 1) * _step + 10 + r, index + 2, phase3_debug[node][0])
+                sheet_energy.write((rnd - 1) * _step + 11 + r, index + 2, phase3_debug[node][1])
+                sheet_energy.write((rnd - 1) * _step + 12 + r, index + 2, phase4_debug[node][0])
+                sheet_energy.write((rnd - 1) * _step + 13 + r, index + 2, phase4_debug[node][1])
 
             field.nextRound()
             field.resetNode()

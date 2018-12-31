@@ -57,7 +57,7 @@ def CH_competition_phase(field, radius, debug=0):
     CCH_nodeList = sorted(field.getNodes('CCH'), key=lambda x: x.getDelay(), reverse=False)
     if debug:
         nodetype = {node: node.getType() for node in field.getNodes()}
-        received_list = {node: 0 for node in field.getNodes()}
+        received_list = {node: [0, 0] for node in field.getNodes()} # (send, receive)
     # Iterate thought remaining CCH node every iteraton
     # So we can graruntee that so we can get only CCH which doesn't sleep during this phase
     while len(CCH_nodeList):
@@ -67,14 +67,14 @@ def CH_competition_phase(field, radius, debug=0):
             # Consume Energy for sended a packet
             node.consume_transmit(200, radius)
             if debug:
-                received_list[node] += 1
+                received_list[node][0] = received_list[node][0] + 1
             for nearbyNode in field.getNearbyNodes(node, radius, 'CCH', debug=0):
                 # Consume Energy for received a packet
                 nearbyNode.consume_receive(200)
                 nearbyNode.setType('CM')
                 nearbyNode.setState('sleep')
                 if debug:
-                    received_list[nearbyNode] += 1
+                    received_list[nearbyNode][1] = received_list[nearbyNode][1] + 1
                 CCH_nodeList.remove(nearbyNode)
     if debug:
         return nodetype, received_list
@@ -95,13 +95,13 @@ def cluster_announcement_phase(field, radius, debug=0):
     alpha_radius = math.sqrt(2 * math.log(10)) * radius
     CH_nodeList = field.getNodes('CH')
     if debug:
-        received_list = {node: 0 for node in field.getNodes()}
+        received_list = {node: [0, 0] for node in field.getNodes()} # (send, receive)
     for node in CH_nodeList:
         # Consume Energy for sending a packet to CM with in radius]
         start_e = node.getEnergy()
         node.consume_transmit(200, alpha_radius)
         if debug:
-            received_list[node] += 1
+            received_list[node][0] = received_list[node][0] + 1
         for nearbyNode in field.getNearbyNodes(node, alpha_radius, 'CM', debug=0):
             # Consume Energy for receive a packet from CH
             nearbyNode.consume_receive(200)
@@ -113,7 +113,7 @@ def cluster_announcement_phase(field, radius, debug=0):
                 node.setPointerNode(nearbyNode)
                 nearbyNode.setPointerNode(node)
             if debug:
-                received_list[nearbyNode] += 1
+                received_list[nearbyNode][1] = received_list[nearbyNode][1] + 1
 
     # In case; CM can't find any CH node nearby, so we need to brute force find CH
     # Find CH node in length of diagonal of area radius
@@ -135,7 +135,7 @@ def cluster_announcement_phase(field, radius, debug=0):
         return received_list
 
 
-def cluster_association_phase(field):
+def cluster_association_phase(field, debug=0):
     """
     Phase 4
     Cluster Association Phase
@@ -150,17 +150,24 @@ def cluster_association_phase(field):
         field (Field): Field
     """
     CH_nodeList = field.getNodes('CH')
+    if debug:
+        received_list = {node: [0, 0] for node in field.getNodes()} # (send, receive)
     for node in CH_nodeList:
         for member in node.getPointerNode():
             member.consume_transmit(200, member.getDistanceFromNode(node))
             node.consume_receive(200)
             node.append_packet_energy(member.getEnergy())
+            if debug:
+                received_list[member][0] += 1
+                received_list[node][1] += 1
         # Find the size and average energy for each Cluster Header
         node.updateSize()
         node.computeAverageEnergy()
+    if debug:
+        return received_list
 
 
-def cluster_confirmation_phase(field, is_fuzzy=False, plot_graph=False):
+def cluster_confirmation_phase(field, is_fuzzy=False, plot_graph=False, debug=0):
     """
     Phase 5
     Cluster Confirmation Phase
