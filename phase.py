@@ -14,7 +14,6 @@ from itertools import product
 from Field import Field
 from Node import Node
 
-E = Type
 def CCH_election_phase(field: Type[Field], t: float) -> int:
     """
     Phase 1
