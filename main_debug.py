@@ -1,11 +1,9 @@
 """
 For running algorithm phase
 """
-import math
 import os
 import shutil
-import xlwt
-import xlrd
+import openpyxl as xl
 import time as time
 import numpy as np
 import multiprocessing as mp
@@ -17,7 +15,6 @@ from readxl import readExcelFile
 from itertools import product
 from Field import Field
 from Node import Node
-#from xlutils.copy import copy as xl_copy
 
 def check_access_file(tc, size, t_init):
     """
@@ -26,10 +23,10 @@ def check_access_file(tc, size, t_init):
     if not os.path.exists(config.root + "/R%02d/T%02d/%04d" % (size, t_init, tc)):
         return False, (tc, size, t_init)
     else:
-        if os.path.exists(config.root + "/R%02d/T%02d/%04d/data.xls" % (size, t_init, tc)):
+        if os.path.exists(config.root + "/R%02d/T%02d/%04d/data.xlsx" % (size, t_init, tc)):
             try:
-                book = xlrd.open_workbook(config.root + "/R%02d/R%02dT%02ddata.xls" % (size, size, t_init))
-                if ("%04d" % tc) in book.sheet_names():
+                book = xl.load_workbook(config.root + "/R%02d/R%02dT%02ddata.xlsx" % (size, size, t_init))
+                if ("%04d" % tc) in book.sheetnames:
                     return True, (tc, size, t_init)
                 else:
                     return False, (tc, size, t_init)
@@ -50,39 +47,42 @@ def running(tc, t_init, size, is_fuzzy=True):
     density = config.density
     # size = 10
     #----------------------
-
-    standy_loop = config.standy_loop#int(input('Standy loop: '))
-    field_radius = size#int(input('Init Radius: '))
+    standy_loop = config.standy_loop
+    field_radius = size
     t_init_for_file = int(t_init * 100)
 
     start_time = time.time()
     print("Processing in testcase {} which set initial radius at {}, density at {} and T value at {}.\nRunning on processer {}\n".format(tc, field_radius, density, t_init, mp.current_process()))
 
     # Check if file already generate
-    if not os.path.exists(config.root + "/R%02d/T%02d/%04d" % (size, t_init_for_file, tc)):
+    if not os.path.exists(config.root + "/R%02d/T%02d/%04d" % (size, t_init, tc)):
         os.makedirs(config.root + "/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
     else:
-        if os.path.exists(config.root + "/R%02d/T%02d/%04d/data.xls" % (size, t_init_for_file, tc)):
+        if os.path.exists(config.root + "/R%02d/T%02d/%04d/data.xlsx" % (size, t_init_for_file, tc)):
             while not readExcelFile(tc, t_init_for_file, size):
                 time.sleep(1)
             time_used = time.time() - start_time
             print("Processing at testcase {} which set initial radius at {}, density at {} and T value at {}.\nfinished within time {}s.\nRunning on processer {}\n".format(tc, field_radius, density, t_init, time_used, mp.current_process()))
             return
         else:
-            shutil.rmtree(config.root + "/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
+            try:
+                shutil.rmtree(config.root + "/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
+            except Exception as err:
+                pass
             os.makedirs(config.root + "/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
 
-    book = xlwt.Workbook(encoding="utf-8")
-    sheet1 = book.add_sheet("%04d" % tc)    
-    sheet1.write(0, 0, "Round")
-    sheet1.write(0, 1, "AverageAll_energy") 
-    sheet1.write(0, 2, "Size")
-    sheet1.write(0, 3, "T")
-    sheet1.write(0, 4, "No Pointer node")
 
-    sheet_energy = book.add_sheet("energy")
-    sheet_energy.write(0, 0, "Round")
-    sheet_energy.write(0, 1, "Phase")
+    book = xl.Workbook()
+    sheet = book.create_sheet("%04d" % tc)
+    sheet.cell(1, 1, "Round")
+    sheet.cell(1, 2, "AVG_energy") 
+    sheet.cell(1, 3, "Size")
+    sheet.cell(1, 4, "T")
+    sheet.cell(1, 5, "No Pointer node")
+
+    sheet_energy = book.create_sheet("energy")
+    sheet_energy.cell(1, 1, "Round")
+    sheet_energy.cell(1, 2, "Phase")
 
     field = Field(100, density, radius=field_radius, start_energy=3, t=t_init)
     left_node = [int(field.getDensity() * int(field.getSize())**2)]
@@ -93,7 +93,7 @@ def running(tc, t_init, size, is_fuzzy=True):
 
     energy_memo = dict()
     for index, node in enumerate(field.getNodes(), start=1):
-        sheet_energy.write(0, index + 2, "Node (%.2f, %.2f)"% node.getPosition())
+        sheet_energy.cell(1, index + 3, "Node (%.2f, %.2f)"% node.getPosition())
         energy_memo[node.getName()] = node.getEnergy()
 
     while len(field.getNodes()) >= (field.getDensity() * field.getSize()**2):
@@ -102,45 +102,45 @@ def running(tc, t_init, size, is_fuzzy=True):
         # Phase 1 :: Loop until have at least one CCH
         if phase.CCH_election_phase(field, t_init):
             # Running one setup phase
-            sheet_energy.write((rnd - 1) * _step + 1, 0, rnd)
-            sheet_energy.write((rnd - 1) * _step + 1, 1, "Current Energy")
+            sheet_energy.cell((rnd - 1) * _step + 2, 1, rnd)
+            sheet_energy.cell((rnd - 1) * _step + 2, 2, "Current Energy")
             for index, node in enumerate(field.getNodes(), start=1):
-                sheet_energy.write((rnd - 1) * _step + 1, index + 2, energy_memo[node.getName()])
+                sheet_energy.cell((rnd - 1) * _step + 2, index + 3, energy_memo[node.getName()])
 
             # Phase 2
-            phase2_debug = phase.CH_competition_phase(field, field_radius, debug=1)
-            sheet_energy.write((rnd - 1) * _step + 2, 1, "CH_competition_phase")
+            phase2_debug = phase.CH_competition_phase(field, field_radius, debug=True)
+            sheet_energy.cell((rnd - 1) * _step + 3, 2, "CH_competition_phase")
             for index, node in enumerate(field.getNodes(), start=1):
                 before = energy_memo[node.getName()]
                 after = node.getEnergy()
-                sheet_energy.write((rnd - 1) * _step + 2, index + 2, before - after)
+                sheet_energy.cell((rnd - 1) * _step + 3, index + 3, before - after)
                 energy_memo[node.getName()] = after
 
             # Phase 3
-            phase3_debug = phase.cluster_announcement_phase(field, field_radius, debug=1)
-            sheet_energy.write((rnd - 1) * _step + 3, 1, "cluster_announcement_phase")
+            phase3_debug = phase.cluster_announcement_phase(field, field_radius, debug=True)
+            sheet_energy.cell((rnd - 1) * _step + 4, 2, "cluster_announcement_phase")
             for index, node in enumerate(field.getNodes(), start=1):
                 before = energy_memo[node.getName()]
                 after = node.getEnergy()
-                sheet_energy.write((rnd - 1) * _step + 3,  index + 2, before - after)
+                sheet_energy.cell((rnd - 1) * _step + 4,  index + 3, before - after)
                 energy_memo[node.getName()] = after
 
             # Phase 4
-            phase4_debug = phase.cluster_association_phase(field, debug=1)
-            sheet_energy.write((rnd - 1) * _step + 4, 1, "cluster_association_phase")
+            phase4_debug = phase.cluster_association_phase(field, debug=True)
+            sheet_energy.cell((rnd - 1) * _step + 5, 2, "cluster_association_phase")
             for index, node in enumerate(field.getNodes(), start=1):
                 before = energy_memo[node.getName()]
                 after = node.getEnergy()
-                sheet_energy.write((rnd - 1) * _step + 4, index + 2, before - after)
+                sheet_energy.cell((rnd - 1) * _step + 5, index + 3, before - after)
                 energy_memo[node.getName()] = after
 
             # Phase 5
             phase.cluster_confirmation_phase(field, is_fuzzy=is_fuzzy, plot_graph=False)
-            sheet_energy.write((rnd - 1) * _step + 5, 1, "cluster_confirmation_phase")
+            sheet_energy.cell((rnd - 1) * _step + 6, 2, "cluster_confirmation_phase")
             for index, node in enumerate(field.getNodes(), start=1):
                 before = energy_memo[node.getName()]
                 after = node.getEnergy()
-                sheet_energy.write((rnd - 1) * _step + 5, index + 2, before - after)
+                sheet_energy.cell((rnd - 1) * _step + 6, index + 3, before - after)
                 energy_memo[node.getName()] = after
                 ignore_node = len(list(filter(lambda x: not x.hasPointerNode(), field.getNodes('CM'))))
 
@@ -158,38 +158,38 @@ def running(tc, t_init, size, is_fuzzy=True):
             e_avg_per_round.append(E_avg)
             r_avg_per_round.append(Size_avg)
             t_avg_per_round.append(T_avg)
-            sheet1.write(rnd, 0, (len(left_node)-1))
-            sheet1.write(rnd, 1, E_avg)
-            sheet1.write(rnd, 2, Size_avg)
-            sheet1.write(rnd, 3, T_avg)
-            sheet1.write(rnd, 4, ignore_node)
+            sheet.cell(rnd + 1, 1, (len(left_node)-1))
+            sheet.cell(rnd + 1, 2, E_avg)
+            sheet.cell(rnd + 1, 3, Size_avg)
+            sheet.cell(rnd + 1, 4, T_avg)
+            sheet.cell(rnd + 1, 5, ignore_node)
 
             for r in range(1, standy_loop + 1):
                 phase.standyPhase(field)
-                sheet_energy.write((rnd - 1) * _step + 5 + r, 1, "Standy Phase %d" % r)
+                sheet_energy.cell((rnd - 1) * _step + 6 + r, 2, "Standy Phase %d" % r)
                 for index, node in enumerate(field.getNodes(), start=1):
                     before = energy_memo[node.getName()]
                     after = node.getEnergy()
-                    sheet_energy.write((rnd - 1) * _step + 5 + r, index + 2, before - after)
+                    sheet_energy.cell((rnd - 1) * _step + 6 + r, index + 3, before - after)
                     energy_memo[node.getName()] = after
 
-            sheet_energy.write((rnd - 1) * _step + 6 + r, 1, "Node type")
-            sheet_energy.write((rnd - 1) * _step + 7 + r, 1, "Phase 2: Node Type")
-            sheet_energy.write((rnd - 1) * _step + 8 + r, 1, "Phase 2: Sending")
-            sheet_energy.write((rnd - 1) * _step + 9 + r, 1, "Phase 2: Receiving")
-            sheet_energy.write((rnd - 1) * _step + 10 + r, 1, "Phase 3: Sending")
-            sheet_energy.write((rnd - 1) * _step + 11 + r, 1, "Phase 3: Receiving")
-            sheet_energy.write((rnd - 1) * _step + 12 + r, 1, "Phase 4: Sending")
-            sheet_energy.write((rnd - 1) * _step + 13 + r, 1, "Phase 4: Receiving")
+            sheet_energy.cell((rnd - 1) * _step + 7 + r, 2, "Node type")
+            sheet_energy.cell((rnd - 1) * _step + 8 + r, 2, "Phase 2: Node Type")
+            sheet_energy.cell((rnd - 1) * _step + 9 + r, 2, "Phase 2: Sending")
+            sheet_energy.cell((rnd - 1) * _step + 10 + r, 2, "Phase 2: Receiving")
+            sheet_energy.cell((rnd - 1) * _step + 11 + r, 2, "Phase 3: Sending")
+            sheet_energy.cell((rnd - 1) * _step + 12 + r, 2, "Phase 3: Receiving")
+            sheet_energy.cell((rnd - 1) * _step + 13 + r, 2, "Phase 4: Sending")
+            sheet_energy.cell((rnd - 1) * _step + 14 + r, 2, "Phase 4: Receiving")
             for index, node in enumerate(field.getNodes(), start=1):
-                sheet_energy.write((rnd - 1) * _step + 6 + r, index + 2, node.getType())
-                sheet_energy.write((rnd - 1) * _step + 7 + r, index + 2, phase2_debug[0][node])
-                sheet_energy.write((rnd - 1) * _step + 8 + r, index + 2, phase2_debug[1][node][0])
-                sheet_energy.write((rnd - 1) * _step + 9 + r, index + 2, phase2_debug[1][node][1])
-                sheet_energy.write((rnd - 1) * _step + 10 + r, index + 2, phase3_debug[node][0])
-                sheet_energy.write((rnd - 1) * _step + 11 + r, index + 2, phase3_debug[node][1])
-                sheet_energy.write((rnd - 1) * _step + 12 + r, index + 2, phase4_debug[node][0])
-                sheet_energy.write((rnd - 1) * _step + 13 + r, index + 2, phase4_debug[node][1])
+                sheet_energy.cell((rnd - 1) * _step + 7 + r, index + 3, node.getType())
+                sheet_energy.cell((rnd - 1) * _step + 8 + r, index + 3, phase2_debug[0][node])
+                sheet_energy.cell((rnd - 1) * _step + 9 + r, index + 3, phase2_debug[1][node][0])
+                sheet_energy.cell((rnd - 1) * _step + 10 + r, index + 3, phase2_debug[1][node][1])
+                sheet_energy.cell((rnd - 1) * _step + 11 + r, index + 3, phase3_debug[node][0])
+                sheet_energy.cell((rnd - 1) * _step + 12 + r, index + 3, phase3_debug[node][1])
+                sheet_energy.cell((rnd - 1) * _step + 13 + r, index + 3, phase4_debug[node][0])
+                sheet_energy.cell((rnd - 1) * _step + 14 + r, index + 3, phase4_debug[node][1])
 
             field.nextRound()
             field.resetNode()
@@ -243,11 +243,20 @@ def running(tc, t_init, size, is_fuzzy=True):
     plt.savefig(config.root + "/R%02d/T%02d/%04d/size_avg" % (size, t_init_for_file, tc), dpi=300)
     plt.clf()   
     
-    #del field
     time_used = time.time() - start_time
-    sheet1.write(0, 5, "Time used: %f" % time_used)
-    book.save(config.root + "/R%02d/T%02d/%04d/data.xls" % (size, t_init_for_file, tc))
+    sheet.cell(1, 6, "Runtime (sec)")
+    sheet.cell(2, 6, "%f" % time_used)
+
+    try:
+        book.save(config.root + "/R%02d/T%02d/%04d/data.xlsx" % (size, t_init_for_file, tc))
+        book.close()
+    except Exception as err:
+        print(err)
+
+    print(os.path.exists(config.root + "/R%02d/T%02d/%04d/data.xlsx" % (size, t_init_for_file, tc)))
+
     while not readExcelFile(tc, t_init_for_file, size):
+        print('cannot read file')
         time.sleep(1)
 
     print("Processing at testcase {} which set initial radius at {}, density at {} and T value at {}.\nfinished within time {}s.\nRunning on processer {}\n".format(tc, field_radius, density, t_init, time_used, mp.current_process()))

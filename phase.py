@@ -4,17 +4,18 @@ Algorithm for each phase
 import math
 import os
 import shutil
-import xlwt
 import time as time
 import numpy as np
 import multiprocessing as mp
 import matplotlib.pyplot as plt
 import matplotlib.markers as mark
+from typing import Type, Optional, Union, List, Tuple, Dict
 from itertools import product
 from Field import Field
 from Node import Node
 
-def CCH_election_phase(field, t):
+E = Type
+def CCH_election_phase(field: Type[Field], t: float) -> int:
     """
     Phase 1
     CCH Election Phase
@@ -22,8 +23,10 @@ def CCH_election_phase(field, t):
     Random select node to be a Candidate Claster Header (CCH)
 
     Args:
-        field (Field): Field
+        field (Field): Field Object
         t     (float): Probability to promote node to be a Candidate Claster Header (CCH)
+    Return
+        Amount of Candidate node (int)
     """
     nodeList = field.getNodes()
     initEnergy = field.getInitEnergy()
@@ -41,7 +44,7 @@ def CCH_election_phase(field, t):
     return candidate_count
 
 
-def CH_competition_phase(field, radius, debug=0):
+def CH_competition_phase(field: Type[Field], radius: float, debug: bool = False) -> Optional[Tuple[Dict[Type[Node], str], Dict[Type[Node], Dict[int, int]]]]:
     """
     Phase 2
     CH Competition Phase
@@ -50,9 +53,11 @@ def CH_competition_phase(field, radius, debug=0):
     then sleep the other nodes around
 
     Args:
-        field  (Field): Field
+        field  (Field): Field Object
         radius (float): Radius around CCH nodes
-        debug   (bool): Toggle debug mode
+        debug   (bool): Toggling Debug mode
+    Return
+        Tuple of dictionary node with type and connection (which is sender and receiver) at this phase, or None (if not debug)
     """
     CCH_nodeList = sorted(field.getNodes('CCH'), key=lambda x: x.getDelay(), reverse=False)
     if debug:
@@ -80,7 +85,7 @@ def CH_competition_phase(field, radius, debug=0):
         return nodetype, received_list
 
 
-def cluster_announcement_phase(field, radius, debug=0):
+def cluster_announcement_phase(field: Type[Field], radius: float, debug: bool = False) -> Optional[Dict[Type[Node], Dict[int, int]]]:
     """
     Phase 3
     Cluster Announcement Phase
@@ -88,9 +93,11 @@ def cluster_announcement_phase(field, radius, debug=0):
     Cluster Header (CH) announce around themselves for announce Cluster Members to pointer at them
 
     Args:
-        field  (Field): Field
+        field  (Field): Field Object
         radius (float): Radius around CH nodes
-        debug   (bool): Toggle debug mode
+        debug   (bool): Toggle debug mode (init = False)
+    Return
+        Dictionary of node connection (which is sender and receiver), or None (if not debug)
     """
     alpha_radius = math.sqrt(2 * math.log(10)) * radius
     CH_nodeList = field.getNodes('CH')
@@ -135,7 +142,7 @@ def cluster_announcement_phase(field, radius, debug=0):
         return received_list
 
 
-def cluster_association_phase(field, debug=0):
+def cluster_association_phase(field: Type[Field], debug: bool = False) -> Optional[Dict[Type[Node], Dict[int, int]]]:
     """
     Phase 4
     Cluster Association Phase
@@ -147,7 +154,10 @@ def cluster_association_phase(field, debug=0):
     and calculate average of residual energy of CM that associate with itself
     
     Args:
-        field (Field): Field
+        field (Field): Field Object
+        debug  (bool): Toggling Debug mode
+    Return
+        Dictionary of node connection (which is sender and receiver), or None (if not debug)
     """
     CH_nodeList = field.getNodes('CH')
     if debug:
@@ -167,13 +177,19 @@ def cluster_association_phase(field, debug=0):
         return received_list
 
 
-def cluster_confirmation_phase(field, is_fuzzy=False, plot_graph=False, debug=0):
+def cluster_confirmation_phase(field: Type[Field], is_fuzzy: bool = False, plot_graph: bool = False, debug: bool = False) -> None:
     """
     Phase 5
     Cluster Confirmation Phase
 
     All Cluster node will confirm the duty that they would be in a round
     and so it's should start process by sending data to BaseStation
+
+    Args:
+        field     (Field): Field Object
+        is_fuzzy   (bool): Is fuzzy or fixed T value process
+        plot_graph (bool): Need to plot graph after finish this phase
+        debug      (bool): Toggling Debug mode
     """
     nodeList, count = field.getNodes(), 0
     for node in field.getNodes('CH'):
@@ -205,12 +221,16 @@ def cluster_confirmation_phase(field, is_fuzzy=False, plot_graph=False, debug=0)
             for member in node.getPointerNode():
                 plt.plot([node.getX(), member.getX()], [node.getY(), member.getY()], color='r', alpha=0.7, linewidth=0.8)
 
-def standyPhase(field):
+
+def standyPhase(field: Type[Field]) -> None:
     """
     Standy Phase
     
     All Cluster Header aggregate data from Cluster Member
     and send it to a BaseStation
+
+    Args:
+        field (Field): Field object
     """
     for node in field.getNodes('CH'):
         for member in node.getPointerNode():
@@ -220,7 +240,7 @@ def standyPhase(field):
         node.consume_transmit(4000, node.getDistanceFromNode(field.getBaseStation()))
 
 
-def Fuzzy(node_energy, avg_energy, cluster_size, init_radius):
+def Fuzzy(node_energy: float, avg_energy: float, cluster_size: float, init_radius: float) -> float:
     """
     Fuzzy algorithms
     """
@@ -250,9 +270,15 @@ def Fuzzy(node_energy, avg_energy, cluster_size, init_radius):
     return T_value / count
 
 
-def adjustment_T_value(field, node):
+def adjustment_T_value(field: Type[Field], node: Type[Node]) -> float:
     """
     T-Value adjustment
+
+    Args:
+        field (Field): Field object
+        node   (Node): Node object
+    Return
+        New adjustment T-value (float)
     """
     # Fuzzy algorithms
     radius = field.getRadius()
