@@ -38,7 +38,7 @@ def check_access_file(tc, size, t_init):
 
 
 # This is main
-def running(tc, t_init, size, is_fuzzy=True):
+def running(tc, size, t_init, is_fuzzy=True):
     #----------------------
     # Initial value
     # Change these value if you want new property
@@ -55,7 +55,7 @@ def running(tc, t_init, size, is_fuzzy=True):
     print("Processing in testcase {} which set initial radius at {}, density at {} and T value at {}.\nRunning on processer {}\n".format(tc, field_radius, density, t_init, mp.current_process()))
 
     # Check if file already generate
-    if not os.path.exists(config.root + "/R%02d/T%02d/%04d" % (size, t_init, tc)):
+    if not os.path.exists(config.root + "/R%02d/T%02d/%04d" % (size, t_init_for_file, tc)):
         os.makedirs(config.root + "/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
     else:
         if os.path.exists(config.root + "/R%02d/T%02d/%04d/data.xlsx" % (size, t_init_for_file, tc)):
@@ -73,7 +73,8 @@ def running(tc, t_init, size, is_fuzzy=True):
 
 
     book = xl.Workbook()
-    sheet = book.create_sheet("%04d" % tc)
+    sheet = book.active
+    sheet.title = "%04d" % tc
     sheet.cell(1, 1, "Round")
     sheet.cell(1, 2, "AVG_energy") 
     sheet.cell(1, 3, "Size")
@@ -84,8 +85,8 @@ def running(tc, t_init, size, is_fuzzy=True):
     sheet_energy.cell(1, 1, "Round")
     sheet_energy.cell(1, 2, "Phase")
 
-    field = Field(100, density, radius=field_radius, start_energy=3, t=t_init)
-    left_node = [int(field.getDensity() * int(field.getSize())**2)]
+    field = Field(100, 100, density, radius=field_radius, start_energy=3, t=t_init)
+    left_node = [int(field.getDensity() * field.getWidth() * field.getHeight())]
     t_avg_per_round = []
     e_avg_per_round = []
     r_avg_per_round = []
@@ -96,9 +97,10 @@ def running(tc, t_init, size, is_fuzzy=True):
         sheet_energy.cell(1, index + 3, "Node (%.2f, %.2f)"% node.getPosition())
         energy_memo[node.getName()] = node.getEnergy()
 
-    while len(field.getNodes()) >= (field.getDensity() * field.getSize()**2):
+    while len(field.getNodes()) >= (field.getDensity() * field.getWidth() * field.getHeight()):
         rnd = field.getRound()
-        _step = 15
+        print(rnd)
+        _step = 12
         # Phase 1 :: Loop until have at least one CCH
         if phase.CCH_election_phase(field, t_init):
             # Running one setup phase
@@ -173,23 +175,17 @@ def running(tc, t_init, size, is_fuzzy=True):
                     sheet_energy.cell((rnd - 1) * _step + 6 + r, index + 3, before - after)
                     energy_memo[node.getName()] = after
 
-            sheet_energy.cell((rnd - 1) * _step + 7 + r, 2, "Node type")
-            sheet_energy.cell((rnd - 1) * _step + 8 + r, 2, "Phase 2: Node Type")
-            sheet_energy.cell((rnd - 1) * _step + 9 + r, 2, "Phase 2: Sending")
-            sheet_energy.cell((rnd - 1) * _step + 10 + r, 2, "Phase 2: Receiving")
-            sheet_energy.cell((rnd - 1) * _step + 11 + r, 2, "Phase 3: Sending")
-            sheet_energy.cell((rnd - 1) * _step + 12 + r, 2, "Phase 3: Receiving")
-            sheet_energy.cell((rnd - 1) * _step + 13 + r, 2, "Phase 4: Sending")
-            sheet_energy.cell((rnd - 1) * _step + 14 + r, 2, "Phase 4: Receiving")
+            sheet_energy.cell((rnd - 1) * _step + 7 + r, 2, "Phase 2: Node Type")
+            sheet_energy.cell((rnd - 1) * _step + 8 + r, 2, "Phase 2: Sending & Receiving")
+            sheet_energy.cell((rnd - 1) * _step + 9 + r, 2, "Phase 3: Sending & Receiving")
+            sheet_energy.cell((rnd - 1) * _step + 10 + r, 2, "Phase 4: Sending & Receiving")
+            sheet_energy.cell((rnd - 1) * _step + 11 + r, 2, "Final Node type")
             for index, node in enumerate(field.getNodes(), start=1):
-                sheet_energy.cell((rnd - 1) * _step + 7 + r, index + 3, node.getType())
-                sheet_energy.cell((rnd - 1) * _step + 8 + r, index + 3, phase2_debug[0][node])
-                sheet_energy.cell((rnd - 1) * _step + 9 + r, index + 3, phase2_debug[1][node][0])
-                sheet_energy.cell((rnd - 1) * _step + 10 + r, index + 3, phase2_debug[1][node][1])
-                sheet_energy.cell((rnd - 1) * _step + 11 + r, index + 3, phase3_debug[node][0])
-                sheet_energy.cell((rnd - 1) * _step + 12 + r, index + 3, phase3_debug[node][1])
-                sheet_energy.cell((rnd - 1) * _step + 13 + r, index + 3, phase4_debug[node][0])
-                sheet_energy.cell((rnd - 1) * _step + 14 + r, index + 3, phase4_debug[node][1])
+                sheet_energy.cell((rnd - 1) * _step + 7 + r, index + 3, phase2_debug[0][node])
+                sheet_energy.cell((rnd - 1) * _step + 8 + r, index + 3, str(phase2_debug[1][node]))
+                sheet_energy.cell((rnd - 1) * _step + 9 + r, index + 3, str(phase3_debug[node]))
+                sheet_energy.cell((rnd - 1) * _step + 10 + r, index + 3, str(phase4_debug[node]))
+                sheet_energy.cell((rnd - 1) * _step + 11 + r, index + 3, node.getType())
 
             field.nextRound()
             field.resetNode()
@@ -213,9 +209,10 @@ def running(tc, t_init, size, is_fuzzy=True):
     plt.clf()
     plt.plot(list(range(len(t_avg_per_round))), t_avg_per_round)
     '''
-    t_avg_case = np.sum(t_avg_per_round) / len(t_avg_per_round)
-    e_avg_case = np.sum(e_avg_per_round) / len(e_avg_per_round)
-    r_avg_case = np.sum(r_avg_per_round) / len(r_avg_per_round)
+    print('test1')
+    t_avg_case = np.mean(t_avg_per_round, dtype=np.float64)
+    e_avg_case = np.mean(e_avg_per_round, dtype=np.float64)
+    r_avg_case = np.mean(r_avg_per_round, dtype=np.float64)
     plt.plot(list(range(len(t_avg_per_round))), t_avg_per_round, linewidth=0.7, alpha=0.7)
     plt.plot([0, len(t_avg_per_round)], [t_avg_case, t_avg_case], color='red')
     plt.xlabel('Round')
@@ -258,6 +255,8 @@ def running(tc, t_init, size, is_fuzzy=True):
     while not readExcelFile(tc, t_init_for_file, size):
         print('cannot read file')
         time.sleep(1)
+
+    del book
 
     print("Processing at testcase {} which set initial radius at {}, density at {} and T value at {}.\nfinished within time {}s.\nRunning on processer {}\n".format(tc, field_radius, density, t_init, time_used, mp.current_process()))
 

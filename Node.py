@@ -6,7 +6,7 @@ class Node:
     """
     Object Node
     """
-    def __init__(self, x=0, y=0, energy=3, nodetype='CM', name='node', delay=0, t=0.2, state='active'):
+    def __init__(self, x: float = 0, y: float = 0, energy: float = 3, nodetype: str = 'CM', name: str = 'node', delay: float = 0, t: float = 0.2, state: str = 'active'):
         """
         Initial variables for new node
         Args:
@@ -41,7 +41,7 @@ class Node:
         """
         self.__distance_node = dict()
 
-    def getName(self):
+    def getName(self) -> str:
         """
         Get name of node
         Return

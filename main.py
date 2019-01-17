@@ -54,7 +54,7 @@ def running(tc, size, t_init, is_fuzzy=True):
     print("Processing in testcase {} which set initial radius at {}, density at {} and T value at {}.\nRunning on processer {}\n".format(tc, field_radius, density, t_init, mp.current_process()))
 
     # Check if file already generate
-    if not os.path.exists(config.root + "/R%02d/T%02d/%04d" % (size, t_init, tc)):
+    if not os.path.exists(config.root + "/R%02d/T%02d/%04d" % (size, t_init_for_file, tc)):
         os.makedirs(config.root + "/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
     else:
         if os.path.exists(config.root + "/R%02d/T%02d/%04d/data.xlsx" % (size, t_init_for_file, tc)):
@@ -79,10 +79,10 @@ def running(tc, size, t_init, is_fuzzy=True):
     sheet.cell(1, 4, "T")
     sheet.cell(1, 5, "No Pointer node")
 
-    field = Field(100, density, radius=field_radius, start_energy=3, t=t_init)
-    left_node = [int(field.getDensity() * int(field.getSize())**2)]
+    field = Field(100, 100, density, radius=field_radius, start_energy=3, t=t_init)
+    left_node = [int(field.getDensity() * field.getWidth() * field.getHeight())]
     ignore_node = []
-    while len(field.getNodes()) >= (field.getDensity() * field.getSize()**2):
+    while len(field.getNodes()) >= (field.getDensity() * field.getWidth() * field.getHeight()):
         if phase.CCH_election_phase(field, t_init):
             # Running one setup phase
             phase.CH_competition_phase(field, field_radius)
@@ -111,6 +111,7 @@ def running(tc, size, t_init, is_fuzzy=True):
                 phase.standyPhase(field)
             field.nextRound()
             field.resetNode()
+            print(rnd)
 
     e_avg_per_round = list(map(lambda cell: cell.value, sheet['B'][1:]))
     r_avg_per_round = list(map(lambda cell: cell.value, sheet['C'][1:]))
@@ -194,5 +195,4 @@ if __name__ == "__main__":
     To-do
     """
     #print("Starting plot graph...")
-
 

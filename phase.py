@@ -282,10 +282,12 @@ def adjustment_T_value(field: Type[Field], node: Type[Node]) -> float:
     # Fuzzy algorithms
     radius = field.getRadius()
     value_G = Fuzzy(node.getEnergy(), node.getAverageAll_energy(), node.getSize(), radius)
+    T_limit = {"71x100": {"0.00625": 0.146, "0.0125": 0.075, "0.025": 0.038, "0.05": 0.02},
+               "100x100": {"0.00625": 0.1121, "0.0125": 0.0584, "0.025": 0.0291, "0.05": 0.151, "0.1": 0.0076}}
     if value_G <= 0.5:
         new_T = node.getT() + 0.01*(0.5 - value_G)/0.5
-        node.setT(max(0.01, min(1, new_T)))
+        node.setT(max(T_limit["100x100"][str(field.getDensity())], min(1, new_T)))
     else:
         new_T = node.getT() - 0.01*(value_G - 0.5)/0.5
-        node.setT(max(0.01, min(1, new_T)))
+        node.setT(max(T_limit["100x100"][str(field.getDensity())], min(1, new_T)))
     return new_T
