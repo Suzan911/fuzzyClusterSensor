@@ -79,10 +79,10 @@ def running(tc, size, t_init, is_fuzzy=True):
     sheet.cell(1, 4, "T")
     sheet.cell(1, 5, "No Pointer node")
 
-    field = Field(100, 100, density, radius=field_radius, start_energy=3, t=t_init)
+    field = Field(config.width, config.height, density, radius=field_radius, start_energy=3, t=t_init)
     left_node = [int(field.getDensity() * field.getWidth() * field.getHeight())]
     ignore_node = []
-    while len(field.getNodes()) >= (field.getDensity() * field.getWidth() * field.getHeight()):
+    while len(field.getNodes()) >= int(field.getDensity() * field.getWidth() * field.getHeight()):
         if phase.CCH_election_phase(field, t_init):
             # Running one setup phase
             phase.CH_competition_phase(field, field_radius)
@@ -111,7 +111,7 @@ def running(tc, size, t_init, is_fuzzy=True):
                 phase.standyPhase(field)
             field.nextRound()
             field.resetNode()
-            print(rnd)
+            #print(rnd)
 
     e_avg_per_round = list(map(lambda cell: cell.value, sheet['B'][1:]))
     r_avg_per_round = list(map(lambda cell: cell.value, sheet['C'][1:]))
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     testcase = config.testcase
     t_initial = config.t_init
     size = config.size
-    is_fuzzy = True # True if want to simulate fuzzy, False if want to simulate fixed T value
+    is_fuzzy = config.is_fuzzy # True if want to simulate fuzzy, False if want to simulate fixed T value
 
     """
     Check remaining testcase that not generate

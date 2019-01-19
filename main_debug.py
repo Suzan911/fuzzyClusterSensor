@@ -168,24 +168,7 @@ def running(tc, size, t_init, is_fuzzy=True):
 
             for r in range(1, standy_loop + 1):
                 phase.standyPhase(field)
-                sheet_energy.cell((rnd - 1) * _step + 6 + r, 2, "Standy Phase %d" % r)
-                for index, node in enumerate(field.getNodes(), start=1):
-                    before = energy_memo[node.getName()]
-                    after = node.getEnergy()
-                    sheet_energy.cell((rnd - 1) * _step + 6 + r, index + 3, before - after)
-                    energy_memo[node.getName()] = after
 
-            sheet_energy.cell((rnd - 1) * _step + 7 + r, 2, "Phase 2: Node Type")
-            sheet_energy.cell((rnd - 1) * _step + 8 + r, 2, "Phase 2: Sending & Receiving")
-            sheet_energy.cell((rnd - 1) * _step + 9 + r, 2, "Phase 3: Sending & Receiving")
-            sheet_energy.cell((rnd - 1) * _step + 10 + r, 2, "Phase 4: Sending & Receiving")
-            sheet_energy.cell((rnd - 1) * _step + 11 + r, 2, "Final Node type")
-            for index, node in enumerate(field.getNodes(), start=1):
-                sheet_energy.cell((rnd - 1) * _step + 7 + r, index + 3, phase2_debug[0][node])
-                sheet_energy.cell((rnd - 1) * _step + 8 + r, index + 3, str(phase2_debug[1][node]))
-                sheet_energy.cell((rnd - 1) * _step + 9 + r, index + 3, str(phase3_debug[node]))
-                sheet_energy.cell((rnd - 1) * _step + 10 + r, index + 3, str(phase4_debug[node]))
-                sheet_energy.cell((rnd - 1) * _step + 11 + r, index + 3, node.getType())
 
             field.nextRound()
             field.resetNode()
@@ -209,36 +192,7 @@ def running(tc, size, t_init, is_fuzzy=True):
     plt.clf()
     plt.plot(list(range(len(t_avg_per_round))), t_avg_per_round)
     '''
-    print('test1')
-    t_avg_case = np.mean(t_avg_per_round, dtype=np.float64)
-    e_avg_case = np.mean(e_avg_per_round, dtype=np.float64)
-    r_avg_case = np.mean(r_avg_per_round, dtype=np.float64)
-    plt.plot(list(range(len(t_avg_per_round))), t_avg_per_round, linewidth=0.7, alpha=0.7)
-    plt.plot([0, len(t_avg_per_round)], [t_avg_case, t_avg_case], color='red')
-    plt.xlabel('Round')
-    plt.ylabel('T')
-    plt.title("T Average per round")
-    # plt.show()
-    plt.savefig(config.root + "/R%02d/T%02d/%04d/t_avg" % (size, t_init_for_file, tc), dpi=300)
-    plt.clf()
-
-    plt.plot(list(range(len(e_avg_per_round))), e_avg_per_round, linewidth=0.8, alpha=0.8, color='green')
-    plt.plot([0, len(e_avg_per_round)], [3, 0], color='red', linewidth=0.8, alpha=0.4)
-    plt.xlabel('Round')
-    plt.ylabel('Energy')
-    plt.title("Energy Average per round")
-    # plt.show()
-    plt.savefig(config.root + "/R%02d/T%02d/%04d/energy_avg" % (size, t_init_for_file, tc), dpi=300)
-    plt.clf()
-
-    plt.plot(list(range(len(r_avg_per_round))), r_avg_per_round, linewidth=0.7, alpha=0.7)
-    plt.plot([0, len(r_avg_per_round)], [r_avg_case, r_avg_case], color='red')
-    plt.xlabel('Round')
-    plt.ylabel('Size Cluster')
-    plt.title("Size Cluster Average per round")
-    # plt.show()
-    plt.savefig(config.root + "/R%02d/T%02d/%04d/size_avg" % (size, t_init_for_file, tc), dpi=300)
-    plt.clf()   
+ 
     
     time_used = time.time() - start_time
     sheet.cell(1, 6, "Runtime (sec)")
