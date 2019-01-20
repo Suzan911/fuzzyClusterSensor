@@ -24,6 +24,7 @@ def check_access_file(tc, size, t_init):
         return False, (tc, size, t_init)
     else:
         if os.path.exists(config.root + "/R%02d/T%02d/%04d/data.xlsx" % (size, t_init, tc)):
+            """
             try:
                 book = xl.load_workbook(config.root + "/R%02d/R%02dT%02ddata.xlsx" % (size, size, t_init))
                 if ("%04d" % tc) in book.sheetnames:
@@ -32,6 +33,8 @@ def check_access_file(tc, size, t_init):
                     return False, (tc, size, t_init)
             except:
                 return False, (tc, size, t_init)
+            """
+            return True, (tc, size, t_init)
         else:
             shutil.rmtree(config.root + "/R%02d/T%02d/%04d" % (size, t_init, tc))
             return False, (tc, size, t_init)
@@ -111,7 +114,6 @@ def running(tc, size, t_init, is_fuzzy=True):
                 phase.standyPhase(field)
             field.nextRound()
             field.resetNode()
-            print(rnd)
 
     e_avg_per_round = list(map(lambda cell: cell.value, sheet['B'][1:]))
     r_avg_per_round = list(map(lambda cell: cell.value, sheet['C'][1:]))
@@ -156,8 +158,6 @@ def running(tc, size, t_init, is_fuzzy=True):
         book.close()
     except Exception as err:
         print(err)
-
-    print(os.path.exists(config.root + "/R%02d/T%02d/%04d/data.xlsx" % (size, t_init_for_file, tc)))
 
     while not readExcelFile(tc, t_init_for_file, size):
         time.sleep(1)
