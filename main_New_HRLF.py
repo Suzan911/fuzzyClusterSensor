@@ -89,6 +89,7 @@ def running(tc, size, t_init, is_fuzzy=True):
         nodeList = field.getNodes()
         initEnergy = field.getInitEnergy()
         for node in nodeList: #line2 T wait <- 1/Ej
+            #plt.text(node.getX(), node.getY(), node.getEnergy(), fontsize=2, wrap=True)
             node.setType('CCH')
             node.setDelay(1/node.getEnergy()) # delay
             node.setState('AAA')
@@ -103,7 +104,7 @@ def running(tc, size, t_init, is_fuzzy=True):
                 for nearbyNode in field.getNearbyNodes(node, radius, 'CM', debug=0):
                     # Consume Energy for received a packet
                     nearbyNode.consume_receive(200)
-                    if node.getEnergy() < nearbyNode.getPointerNode().getEnergy(): #PointerNode CH
+                    if node.getEnergy() > nearbyNode.getPointerNode().getEnergy(): #PointerNode CH
                         nearbyNode.getPointerNode().removePointerNode(nearbyNode)
                         node.setPointerNode(nearbyNode)
                         nearbyNode.setPointerNode(node)
@@ -123,17 +124,20 @@ def running(tc, size, t_init, is_fuzzy=True):
                 node.consume_receive(200)
                 node.append_packet_energy(member.getEnergy())
         # Find the size and average energy for each Cluster Header
-        node.updateSize()
-        node.computeAverageEnergy()
+            node.updateSize()
+            node.computeAverageEnergy()
         for node in nodeList:
+            #plt.text(node.getX(), node.getY(), node.getEnergy(), fontsize=2, wrap=True)
             if node.getEnergy() <= 0:
                 field.deleteNode(node)
                 del node
+        """
         for node in field.getNodes('CH'):
             for member in node.getPointerNode():
-                plt.plot([node.getX(), member.getX()], [node.getY(), member.getY()], color='r', alpha=0.7, linewidth=0.8)
+                plt.plot([node.getX(), member.getX()], [node.getY(), member.getY()], color='r', alpha=0.4, linewidth=0.5)
         ignore_node = len(list(filter(lambda x: not x.hasPointerNode(), field.getNodes('CM'))))
         field.printField(testcase=tc, showplot=0, rnd=field.getRound())
+        """
         
         # Data storage
         rnd = field.getRound()
@@ -147,8 +151,8 @@ def running(tc, size, t_init, is_fuzzy=True):
         sheet.cell(rnd + 1, 1, (len(left_node)-1))
         sheet.cell(rnd + 1, 2, E_avg)
         sheet.cell(rnd + 1, 3, Size_avg)
-        sheet.cell(rnd + 1, 4, T_avg)
-        sheet.cell(rnd + 1, 5, ignore_node)
+        #sheet.cell(rnd + 1, 4, T_avg)
+        #sheet.cell(rnd + 1, 5, ignore_node)
         for _ in range(standy_loop):
             phase.standyPhase(field)
         field.nextRound()
@@ -201,8 +205,6 @@ def running(tc, size, t_init, is_fuzzy=True):
 
     print(os.path.exists(config.root + "/R%02d/T%02d/%04d/data.xlsx" % (size, t_init_for_file, tc)))
 
-    while not readExcelFile(tc, t_init_for_file, size):
-        time.sleep(1)
 
     print("Processing at testcase {} which set initial radius at {}, density at {} and T value at {}.\nfinished within time {}s.\nRunning on processer {}\n".format(tc, field_radius, density, t_init, time_used, mp.current_process()))
 
