@@ -11,10 +11,10 @@ import matplotlib.pyplot as plt
 import matplotlib.markers as mark
 import phase
 import config
+from writeExcel import writting
 from itertools import product
 from Field import Field
 from Node import Node
-from readxl import readExcelFile
 
 def check_access_file(tc, size, t_init):
     """
@@ -24,16 +24,6 @@ def check_access_file(tc, size, t_init):
         return False, (tc, size, t_init)
     else:
         if os.path.exists(config.root + "/R%02d/T%02d/%04d/data.xlsx" % (size, t_init, tc)):
-            """
-            try:
-                book = xl.load_workbook(config.root + "/R%02d/R%02dT%02ddata.xlsx" % (size, size, t_init))
-                if ("%04d" % tc) in book.sheetnames:
-                    return True, (tc, size, t_init)
-                else:
-                    return False, (tc, size, t_init)
-            except:
-                return False, (tc, size, t_init)
-            """
             return True, (tc, size, t_init)
         else:
             shutil.rmtree(config.root + "/R%02d/T%02d/%04d" % (size, t_init, tc))
@@ -47,31 +37,29 @@ def running(tc, size, t_init, is_fuzzy=True):
     #----------------------
     t_init = t_init / 100
     density = config.density
+    path = config.root + "_" + ("fuzzy" if is_fuzzy else "fixed") + ("/R%02d/T%02d/%04d" % (size, int(t_init * 100), tc))
     # size = 10
     #----------------------
     standy_loop = config.standy_loop
     field_radius = size
-    t_init_for_file = int(t_init * 100)
 
     start_time = time.time()
-    print("Processing in testcase {} which set initial radius at {}, density at {} and T value at {}.\nRunning on processer {}\n".format(tc, field_radius, density, t_init, mp.current_process()))
+    print("Processing in {} testcase {} which set initial radius at {}, density at {} and T value at {}.\nRunning on processer {}\n".format(("fuzzy" if is_fuzzy else "fixed"), tc, field_radius, density, t_init, mp.current_process()))
 
     # Check if file already generate
-    if not os.path.exists(config.root + "/R%02d/T%02d/%04d" % (size, t_init_for_file, tc)):
-        os.makedirs(config.root + "/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
+    if not os.path.exists(path):
+        os.makedirs(path)
     else:
-        if os.path.exists(config.root + "/R%02d/T%02d/%04d/data.xlsx" % (size, t_init_for_file, tc)):
-            while not readExcelFile(tc, t_init_for_file, size):
-                time.sleep(1)
+        if os.path.exists(path + "/data.xlsx"):
             time_used = time.time() - start_time
-            print("Processing at testcase {} which set initial radius at {}, density at {} and T value at {}.\nfinished within time {}s.\nRunning on processer {}\n".format(tc, field_radius, density, t_init, time_used, mp.current_process()))
+            print("Processing at {} testcase {} which set initial radius at {}, density at {} and T value at {}.\nfinished within time {}s.\nRunning on processer {}\n".format(("fuzzy" if is_fuzzy else "fixed"), tc, field_radius, density, t_init, time_used, mp.current_process()))
             return
         else:
             try:
-                shutil.rmtree(config.root + "/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
+                shutil.rmtree(path)
             except Exception as err:
                 pass
-            os.makedirs(config.root + "/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
+            os.makedirs(path)
 
     book = xl.Workbook()
     sheet = book.active
@@ -95,7 +83,7 @@ def running(tc, size, t_init, is_fuzzy=True):
 
             ignore_node = len(list(filter(lambda x: not x.hasPointerNode(), field.getNodes('CM'))))
             #field.printField(testcase=tc, showplot=0, rnd=field.getRound())
-            
+
             # Data storage
             rnd = field.getRound()
             nodes = field.getNodes()
@@ -114,10 +102,6 @@ def running(tc, size, t_init, is_fuzzy=True):
                 phase.standyPhase(field)
             field.nextRound()
             field.resetNode()
-<<<<<<< HEAD
-=======
-            #print(rnd)
->>>>>>> origin/fix_duke
 
     e_avg_per_round = list(map(lambda cell: cell.value, sheet['B'][1:]))
     r_avg_per_round = list(map(lambda cell: cell.value, sheet['C'][1:]))
@@ -132,16 +116,16 @@ def running(tc, size, t_init, is_fuzzy=True):
     plt.ylabel('T')
     plt.title("T Average per round")
     # plt.show()
-    plt.savefig(config.root + "/R%02d/T%02d/%04d/t_avg" % (size, t_init_for_file, tc), dpi=300)
+    plt.savefig(path + "/t_avg", dpi=300)
     plt.clf()
 
-    plt.plot(list(range(len(e_avg_per_round))), e_avg_per_round, linewidth=0.8, alpha=0.8, color='green')
-    plt.plot([0, len(e_avg_per_round)], [3, 0], color='red', linewidth=0.8, alpha=0.4)
+    plt.plot(list(range(len(e_avg_per_round))), e_avg_per_round, linewidth=0.7, alpha=0.7, color='green')
+    plt.plot([0, len(e_avg_per_round)], [3, 0], color='red', linewidth=0.7, alpha=0.4)
     plt.xlabel('Round')
     plt.ylabel('Energy')
     plt.title("Energy Average per round")
     # plt.show()
-    plt.savefig(config.root + "/R%02d/T%02d/%04d/energy_avg" % (size, t_init_for_file, tc), dpi=300)
+    plt.savefig(path + "/energy_avg", dpi=300)
     plt.clf()
 
     plt.plot(list(range(len(r_avg_per_round))), r_avg_per_round, linewidth=0.7, alpha=0.7)
@@ -150,23 +134,20 @@ def running(tc, size, t_init, is_fuzzy=True):
     plt.ylabel('Size Cluster')
     plt.title("Size Cluster Average per round")
     # plt.show()
-    plt.savefig(config.root + "/R%02d/T%02d/%04d/size_avg" % (size, t_init_for_file, tc), dpi=300)
-    plt.clf()   
+    plt.savefig(path + "/size_avg", dpi=300)
+    plt.clf()
 
     time_used = time.time() - start_time
     sheet.cell(1, 6, "Runtime (sec)")
     sheet.cell(2, 6, "%f" % time_used)
 
     try:
-        book.save(config.root + "/R%02d/T%02d/%04d/data.xlsx" % (size, t_init_for_file, tc))
+        book.save(path + "/data.xlsx")
         book.close()
     except Exception as err:
         print(err)
 
-    while not readExcelFile(tc, t_init_for_file, size):
-        time.sleep(1)
-
-    print("Processing at testcase {} which set initial radius at {}, density at {} and T value at {}.\nfinished within time {}s.\nRunning on processer {}\n".format(tc, field_radius, density, t_init, time_used, mp.current_process()))
+    print("Processing at {} testcase {} which set initial radius at {}, density at {} and T value at {}.\nfinished within time {}s.\nRunning on processer {}\n".format(("fuzzy" if is_fuzzy else "fixed"), tc, field_radius, density, t_init, time_used, mp.current_process()))
 
 
 if __name__ == "__main__":
@@ -176,13 +157,18 @@ if __name__ == "__main__":
     testcase = config.testcase
     t_initial = config.t_init
     size = config.size
-    is_fuzzy = config.is_fuzzy # True if want to simulate fuzzy, False if want to simulate fixed T value
+    run_state = config.run_state
 
     """
     Check remaining testcase that not generate
     """
     validate_case = list(filter(lambda x: not x[0], [check_access_file(tc, s, t_value) for tc in testcase for t_value in t_initial for s in size]))
-    chuck = sorted(list(map(lambda x, fuzzy=is_fuzzy: (*x[1], fuzzy), validate_case)))
+    chuck = []
+    if run_state == "Fuzzy" or run_state == "Both":
+        chuck.extend(sorted(list(map(lambda x, fuzzy=True: (*x[1], fuzzy), validate_case))))
+    if run_state == "Fixed" or run_state == "Both":
+        chuck.extend(sorted(list(map(lambda x, fuzzy=False: (*x[1], fuzzy), validate_case))))
+
     print("Currently there are", len(chuck), "testcase that not generate yet.\n")
 
     """
@@ -195,8 +181,12 @@ if __name__ == "__main__":
     print("Finished simulate all testcase using {}s.".format(time.time() - start_time))
 
     """
+    Writing the all of simulate into excel
+    """
+    writting()
+
+    """
     Plot Graph
     To-do
     """
     #print("Starting plot graph...")
-

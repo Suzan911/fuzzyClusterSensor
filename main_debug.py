@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.markers as mark
 import phase
 import config
-from readxl import readExcelFile
+from writeExcel import writting
 from itertools import product
 from Field import Field
 from Node import Node
@@ -24,14 +24,7 @@ def check_access_file(tc, size, t_init):
         return False, (tc, size, t_init)
     else:
         if os.path.exists(config.root + "/R%02d/T%02d/%04d/data.xlsx" % (size, t_init, tc)):
-            try:
-                book = xl.load_workbook(config.root + "/R%02d/R%02dT%02ddata.xlsx" % (size, size, t_init))
-                if ("%04d" % tc) in book.sheetnames:
-                    return True, (tc, size, t_init)
-                else:
-                    return False, (tc, size, t_init)
-            except:
-                return False, (tc, size, t_init)
+            return True, (tc, size, t_init)
         else:
             shutil.rmtree(config.root + "/R%02d/T%02d/%04d" % (size, t_init, tc))
             return False, (tc, size, t_init)
@@ -45,32 +38,28 @@ def running(tc, size, t_init, is_fuzzy=True):
     #----------------------
     t_init = t_init / 100
     density = config.density
-    # size = 10
+    path = config.root + "_" + ("fuzzy" if is_fuzzy else "fixed") + ("/R%02d/T%02d/%04d" % (size, int(t_init * 100), tc))
     #----------------------
     standy_loop = config.standy_loop
     field_radius = size
-    t_init_for_file = int(t_init * 100)
 
     start_time = time.time()
     print("Processing in testcase {} which set initial radius at {}, density at {} and T value at {}.\nRunning on processer {}\n".format(tc, field_radius, density, t_init, mp.current_process()))
 
     # Check if file already generate
-    if not os.path.exists(config.root + "/R%02d/T%02d/%04d" % (size, t_init_for_file, tc)):
-        os.makedirs(config.root + "/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
+    if not os.path.exists(path):
+        os.makedirs(path)
     else:
-        if os.path.exists(config.root + "/R%02d/T%02d/%04d/data.xlsx" % (size, t_init_for_file, tc)):
-            while not readExcelFile(tc, t_init_for_file, size):
-                time.sleep(1)
+        if os.path.exists(path + "/data.xlsx"):
             time_used = time.time() - start_time
             print("Processing at testcase {} which set initial radius at {}, density at {} and T value at {}.\nfinished within time {}s.\nRunning on processer {}\n".format(tc, field_radius, density, t_init, time_used, mp.current_process()))
             return
         else:
             try:
-                shutil.rmtree(config.root + "/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
+                shutil.rmtree(path)
             except Exception as err:
                 pass
-            os.makedirs(config.root + "/R%02d/T%02d/%04d" % (size, t_init_for_file, tc))
-
+            os.makedirs(path)
 
     book = xl.Workbook()
     sheet = book.active
@@ -175,71 +164,86 @@ def running(tc, size, t_init, is_fuzzy=True):
     
     # Save graph
     '''
-    plt.plot(list(range(len(left_node))), left_node)
+    e_avg_per_round = list(map(lambda cell: cell.value, sheet['B'][1:]))
+    r_avg_per_round = list(map(lambda cell: cell.value, sheet['C'][1:]))
+    t_avg_per_round = list(map(lambda cell: cell.value, sheet['D'][1:]))
+    t_avg_case = np.mean(t_avg_per_round, dtype=np.float64)
+    e_avg_case = np.mean(e_avg_per_round, dtype=np.float64)
+    r_avg_case = np.mean(r_avg_per_round, dtype=np.float64)
+
+    plt.plot(list(range(len(t_avg_per_round))), t_avg_per_round, linewidth=0.7, alpha=0.7)
+    plt.plot([0, len(t_avg_per_round)], [t_avg_case, t_avg_case], color='red')
     plt.xlabel('Round')
-    plt.ylabel('Node')
-    plt.title("Node left per round")
+    plt.ylabel('T')
+    plt.title("T Average per round")
     # plt.show()
-    plt.savefig("sample_case_proc/T%04d/%04d" % (t_init, testcase), dpi=300)
+    plt.savefig(path + "/t_avg", dpi=300)
     plt.clf()
 
-    plt.plot(list(range(len(CCH_nodeCount))), CCH_nodeCount)
+    plt.plot(list(range(len(e_avg_per_round))), e_avg_per_round, linewidth=0.7, alpha=0.7, color='green')
+    plt.plot([0, len(e_avg_per_round)], [3, 0], color='red', linewidth=0.7, alpha=0.4)
     plt.xlabel('Round')
-    plt.ylabel('Amount of CCH Node')
-    plt.title("CCH node per round")
+    plt.ylabel('Energy')
+    plt.title("Energy Average per round")
     # plt.show()
-    plt.savefig("sample_case_proc/T%04d/%04d" % (t_init, testcase), dpi=300)
+    plt.savefig(path + "/energy_avg", dpi=300)
     plt.clf()
-    plt.plot(list(range(len(t_avg_per_round))), t_avg_per_round)
+
+    plt.plot(list(range(len(r_avg_per_round))), r_avg_per_round, linewidth=0.7, alpha=0.7)
+    plt.plot([0, len(r_avg_per_round)], [r_avg_case, r_avg_case], color='red')
+    plt.xlabel('Round')
+    plt.ylabel('Size Cluster')
+    plt.title("Size Cluster Average per round")
+    # plt.show()
+    plt.savefig(path + "/size_avg", dpi=300)
+    plt.clf()   
     '''
- 
-    
+
     time_used = time.time() - start_time
     sheet.cell(1, 6, "Runtime (sec)")
     sheet.cell(2, 6, "%f" % time_used)
 
     try:
-        book.save(config.root + "/R%02d/T%02d/%04d/data.xlsx" % (size, t_init_for_file, tc))
+        book.save(path + "/data.xlsx")
         book.close()
     except Exception as err:
         print(err)
-
-    print(os.path.exists(config.root + "/R%02d/T%02d/%04d/data.xlsx" % (size, t_init_for_file, tc)))
-
-    while not readExcelFile(tc, t_init_for_file, size):
-        print('cannot read file')
-        time.sleep(1)
-
     del book
 
     print("Processing at testcase {} which set initial radius at {}, density at {} and T value at {}.\nfinished within time {}s.\nRunning on processer {}\n".format(tc, field_radius, density, t_init, time_used, mp.current_process()))
 
 
-def main():
-    if __name__ == "__main__":
-        """
-        Initial Value
-        """
-        testcase = config.testcase
-        t_initial = config.t_init
-        size = config.size
-        is_fuzzy = True # True if want to simulate fuzzy, False if want to simulate fixed T value
-        print("=== Running on debugging mode! ===")
+if __name__ == "__main__":
+    """
+    Initial Value
+    """
+    testcase = config.testcase
+    t_initial = config.t_init
+    size = config.size
+    run_state = config.run_state
+    print("=== Running on debugging mode! ===")
 
-        """
-        Check remaining testcase that not generate
-        """
-        validate_case = list(filter(lambda x: not x[0], [check_access_file(tc, s, t_value) for tc in testcase for t_value in t_initial for s in size]))
-        chuck = sorted(list(map(lambda x, fuzzy=is_fuzzy: (*x[1], fuzzy), validate_case)))
-        print("Currently there are", len(chuck), "testcase that not generate yet.\n")
+    """
+    Check remaining testcase that not generate
+    """
+    validate_case = list(filter(lambda x: not x[0], [check_access_file(tc, s, t_value) for tc in testcase for t_value in t_initial for s in size]))
+    chuck = []
+    if run_state == "Fuzzy" or run_state == "Both":
+        chuck = chuck.extend(sorted(list(map(lambda x, fuzzy=True: (*x[1], fuzzy), validate_case))))
+    if run_state == "Fixed" or run_state == "Both":
+        chuck = chuck.extend(sorted(list(map(lambda x, fuzzy=False: (*x[1], fuzzy), validate_case))))
+    print("Currently there are", len(chuck), "testcase that not generate yet.\n")
 
-        """
-        Processing
-        """        
-        start_time = time.time()
-        pool = mp.Pool(config.pool)
-        # Running thought T value for each 100 testcase
-        pool.starmap(running, chuck) # product(testcase, t-initial, size)
-        print("Finished simulate all testcase using {}s.".format(time.time() - start_time))
-
-main()
+    """
+    Processing
+    """        
+    start_time = time.time()
+    pool = mp.Pool(config.pool)
+    # Running thought T value for each 100 testcase
+    pool.starmap(running, chuck) # product(testcase, t-initial, size)
+    print("Finished simulate all testcase using {}s.".format(time.time() - start_time))
+    
+    """
+    Writing the all of simulate into excel
+    """
+    writting()
