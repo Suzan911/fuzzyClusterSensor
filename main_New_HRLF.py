@@ -256,14 +256,16 @@ def Fuzzy(node_energy: float, avg_energy: float, d: float, dmin: float, dmax: fl
     medium = max(0, min(1,(energy-0.2)*2.5 if energy < 0.5 else (0.7-energy)*2.5)) if 0.1 <= energy <= 0.5 else 0
     Low = max(0, min(1,energy*2.5 if energy < 0.3 else (0.5-energy)*2.5)) if 0.1 <= energy <= 0.5 else 0
     verylow = max(0, min(1,1 if energy <= 0.1 else (0.3-energy)*2.5)) if energy <= 0.3 else 0
+    print(energy, veryHigh, medium, Low, verylow)
 
     RD = (d - dmin) / (dmax - dmin)
     far = max(0, min(1, 1 if RD >=0.05 else RD*0.22)) if RD >= 0.5 else 0
     adequate = max(0, min(1, (RD - 0.05)*0.22 if RD >=0.5 else RD*0.22)) if 0.05 <= RD <= 0.95 else 0
     close = max(0, min(1, (0.55 - RD)*0.22 if RD >=0.05 else 1)) if RD <= 0.5 else 0
+    print(far, adequate, close)
 
-    rules = [min(verylow, close, adequate, far), min(Low, close, adequate), min(Low, far), min(medium, close),
-    min(medium,adequate), min(medium, far), min(high,close), min(high,adequate), min(high, veryHigh, far, close, adequate)]
+    rules = [max(min(verylow, close, adequate, far),min(verylow, adequate), min(verylow, far)), max(min(Low, close),min(Low, adequate)), min(Low, far), min(medium, close),
+    min(medium,adequate), min(medium, far), min(high,close), min(high,adequate),  max(min(high, far), min(veryHigh, far), min(veryHigh, close),  min(veryHigh,adequate))]
     
     start_mid_t, T_value, count = 0.03125, 0, -1#####
     for i in rules:
