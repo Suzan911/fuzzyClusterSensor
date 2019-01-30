@@ -88,26 +88,21 @@ def running(tc, size, t_init, is_fuzzy=True):
     while len(field.getNodes()) >= int(field.getDensity() * field.getWidth() * field.getHeight()):
         nodeList = field.getNodes()
         initEnergy = field.getInitEnergy()
-        for node in nodeList: #line2 T wait <- 1/Ej
+        #------------line2 T wait <- 1/Ej--------
+        for node in nodeList:
             #plt.text(node.getX(), node.getY(), node.getEnergy(), fontsize=2, wrap=True)
             node.setType('CCH')
             node.setDelay(1/node.getEnergy()) # delay
-            node.setState('AAA')
+            node.setState('active')
         CCH_nodeList = sorted(field.getNodes('CCH'), key=lambda x: x.getDelay(), reverse=False)
         aaa = 0
+        #------------line3 while T wait --------
         while len(CCH_nodeList):
             node = CCH_nodeList.pop(0)
             if node.getState() != 'sleep':
                 node.setType('CH')
                 # Consume Energy for sended a packet
                 node.consume_transmit(200, radius)
-                for nearbyNode in field.getNearbyNodes(node, radius, 'CM', debug=0):
-                    # Consume Energy for received a packet
-                    nearbyNode.consume_receive(200)
-                    if node.getEnergy() > nearbyNode.getPointerNode().getEnergy(): #PointerNode CH
-                        nearbyNode.getPointerNode().removePointerNode(nearbyNode)
-                        node.setPointerNode(nearbyNode)
-                        nearbyNode.setPointerNode(node)
                 for nearbyNode in field.getNearbyNodes(node, radius, 'CCH', debug=0):
                     # Consume Energy for received a packet
                     nearbyNode.consume_receive(200)
@@ -118,7 +113,12 @@ def running(tc, size, t_init, is_fuzzy=True):
                         node.setPointerNode(nearbyNode)
                         nearbyNode.setPointerNode(node)
         CH_nodeList = field.getNodes('CH')
-        for node in CH_nodeList: #CM join CH
+        #---------------CM join CH-------------------
+        lsCHdisfromnode = []
+        lsCHmaxE = []
+        for node in CH_nodeList:
+            lsCHdisfromnode += [node.getDistanceFromNode(field.getBaseStation())]
+            lsCHmaxE += [node.getEnergy()]
             for member in node.getPointerNode():
                 member.consume_transmit(200, member.getDistanceFromNode(node))
                 node.consume_receive(200)
@@ -126,12 +126,16 @@ def running(tc, size, t_init, is_fuzzy=True):
         # Find the size and average energy for each Cluster Header
             node.updateSize()
             node.computeAverageEnergy()
+        for node in CH_nodeList:
+            print(Fuzzy(node.getEnergy(), max(lsCHmaxE), node.getDistanceFromNode(field.getBaseStation()), min(lsCHdisfromnode), max(lsCHdisfromnode)))
         for node in nodeList:
             #plt.text(node.getX(), node.getY(), node.getEnergy(), fontsize=2, wrap=True)
             if node.getEnergy() <= 0:
                 field.deleteNode(node)
                 del node
+        
         """
+        #-----print Field---------
         for node in field.getNodes('CH'):
             for member in node.getPointerNode():
                 plt.plot([node.getX(), member.getX()], [node.getY(), member.getY()], color='r', alpha=0.4, linewidth=0.5)
@@ -242,32 +246,29 @@ if __name__ == "__main__":
 
 
 
-def Fuzzy(node_energy: float, avg_energy: float, cluster_size: float, init_radius: float) -> float:
+def Fuzzy(node_energy: float, avg_energy: float, d: float, dmin: float, dmax: float) -> float:
     """
     Fuzzy algorithms
     """
     energy = node_energy / avg_energy
-    #verylow = 
-    High = max(0, min(1,(1-(1.1 - energy)/0.1))) if energy >= 1 else 0
-    MidHigh = max(0, min(1,(1.1 - energy)/0.1)) if energy >= 1 else 0
-    MidLow = max(0, min(1,(energy - 0.9)/0.1)) if energy <= 1 else 0
-    Low = max(0, min(1,((1-(energy - 0.9)/0.1)))) if energy <= 1 else 0
+    veryHigh = max(0, min(1,(energy-0.6)*2.5 if energy < 0.9 else 1)) if 0.1 <= energy <= 0.5 else 0
+    high = max(0, min(1,(energy-0.4)*2.5 if energy < 0.7 else (0.9-energy)*2.5)) if 0.1 <= energy <= 0.5 else 0
+    medium = max(0, min(1,(energy-0.2)*2.5 if energy < 0.5 else (0.7-energy)*2.5)) if 0.1 <= energy <= 0.5 else 0
+    Low = max(0, min(1,energy*2.5 if energy < 0.3 else (0.5-energy)*2.5)) if 0.1 <= energy <= 0.5 else 0
+    verylow = max(0, min(1,1 if energy <= 0.1 else (0.3-energy)*2.5)) if energy <= 0.3 else 0
 
-    RD = (d - dmin) / (dmix - dmin)
-    Large = max(0, min(1, (1-(1.1 - size)/0.1))) if size >= 1 else 0
-    MidLarge = max(0, min(1, (1.1 - size)/0.1)) if size >= 1 else 0
-    MidSmall = max(0, min(1, (size - 0.9)/0.1)) if size <= 1 else 0
-    Small = max(0, min(1, (1-((size - 0.9))/0.1))) if size <= 1 else 0
+    RD = (d - dmin) / (dmax - dmin)
+    far = max(0, min(1, 1 if RD >=0.05 else RD*0.22)) if RD >= 0.5 else 0
+    adequate = max(0, min(1, (RD - 0.05)*0.22 if RD >=0.5 else RD*0.22)) if 0.05 <= RD <= 0.95 else 0
+    close = max(0, min(1, (0.55 - RD)*0.22 if RD >=0.05 else 1)) if RD <= 0.5 else 0
 
-    rules = [min(High, Large), min(High, MidLarge), min(MidHigh, Large), min(MidHigh, MidLarge), 
-             min(MidLow, Large), min(MidLow, MidLarge), min(Low, Large), min(Low, MidLarge),
-             min(High, MidSmall), min(MidHigh, MidSmall), min(MidLow, MidSmall), min(Low, MidSmall),
-             min(High, Small), min(MidHigh, Small), min(MidLow, Small), min(Low, Small)]
+    rules = [min(verylow, close, adequate, far), min(Low, close, adequate), min(Low, far), min(medium, close),
+    min(medium,adequate), min(medium, far), min(high,close), min(high,adequate), min(high, veryHigh, far, close, adequate)]
     
-    start_mid_t, T_value, count = 0.03125, 0, -1
+    start_mid_t, T_value, count = 0.03125, 0, -1#####
     for i in rules:
         weight = i * start_mid_t
         T_value += weight
         count = count + i if weight and count >= 0 else i if weight else count
-        start_mid_t += 0.0625
-    return T_value / count
+        start_mid_t += 0.0625######
+    return rules#T_value / count
