@@ -46,13 +46,13 @@ if __name__ == "__main__":
     if not os.path.exists("summary"):
         os.makedirs("summary")
 
-    for den in config.density:
+    for density in config.density:
         """ Fuzzy """
         sop_fuzzy, size_fuzzy, t_fuzzy = [], [], []
         for r in config.size:
             SOP_avg, Size_avg, T_avg = [], [], []
             for t in config.t_init:
-                value = get_overall(r, t, True)
+                value = get_overall(density, r, t, True)
                 if value:
                     SOP_avg.append(value[0])
                     Size_avg.append(value[1])
@@ -65,7 +65,7 @@ if __name__ == "__main__":
         sop_1, size_1, t_1 = [], [], []
         for r in config.size:
             SOP_avg, Size_avg, T_avg = [], [], []
-            value = get_overall(r, 10, False)
+            value = get_overall(density, r, 10, False)
             if value:
                 SOP_avg.append(value[0])
                 Size_avg.append(value[1])
@@ -80,7 +80,7 @@ if __name__ == "__main__":
             SOP_avg = []
             Size_avg = []
             T_avg = []
-            value = get_overall(r, 50, False)
+            value = get_overall(density, r, 50, False)
             if value:
                 SOP_avg.append(value[0])
                 Size_avg.append(value[1])
@@ -93,7 +93,7 @@ if __name__ == "__main__":
         sop_9, size_9, t_9 = [], [], []
         for r in config.size:
             SOP_avg, Size_avg, T_avg = [], [], []
-            value = get_overall(r, 90, False)
+            value = get_overall(density, r, 90, False)
             if value:
                 SOP_avg.append(value[0])
                 Size_avg.append(value[1])
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         plt.ylabel('Round')
         plt.title("SOP avg @Density %.5f" % config.density)
         plt.legend(loc=0)
-        plt.savefig("summary/" + config.root + "_SOP_avg", dpi=300)
+        plt.savefig("summary/" + config.root + ("%.5f" % density) + "_SOP_avg", dpi=300)
         plt.clf()
 
         ''' Average size by T fixed and Fuzzy '''
@@ -124,7 +124,7 @@ if __name__ == "__main__":
         plt.ylabel('Round')
         plt.title("Size avg @Density %.5f" % config.density)
         plt.legend(loc=0)
-        plt.savefig("summary/" + config.root + "_Size_avg", dpi=300)
+        plt.savefig("summary/" + config.root + ("%.5f" % density) + "_Size_avg", dpi=300)
         plt.clf()
 
         ''' Average T value by T fixed and Fuzzy '''
@@ -136,6 +136,6 @@ if __name__ == "__main__":
         plt.ylabel('T')
         plt.title("T avg @Density %.5f" % config.density)
         plt.legend(loc=0)
-        plt.savefig("summary/" + config.root + "_T_avg", dpi=300)
+        plt.savefig("summary/" + config.root + ("%.5f" % density) + "_T_avg", dpi=300)
         plt.clf()
 
