@@ -16,11 +16,11 @@ from itertools import product
 from Field import Field
 from Node import Node
 
-def check_access_file(density, tc, size, t_init):
+def check_access_file(density, tc, size, t_init, is_fuzzy):
     """
     Check that have been already generate testcase or not
     """
-    path = config.root + ("%.5f" % density) + ("_fuzzy" if is_fuzzy else "_fixed") + "/R%02d/T%d/%04d" % (density, size, t_init, tc)
+    path = config.root + ("%.5f" % density) + ("_fuzzy" if is_fuzzy else "_fixed") + "/R%02d/T%d/%04d" % (size, t_init, tc)
     if not os.path.exists(path):
         return False, (tc, size, t_init)
     else:
@@ -157,18 +157,19 @@ if __name__ == "__main__":
     testcase = config.testcase
     t_initial = config.t_init
     size = config.size
-    run_state = config.run_state
+    density = config.density
+    state = []
+    if config.run_state == "Fuzzy" or config.run_state == "Both":
+        state.append("fuzzy")
+    if config.run_state == "Fixed" or config.run_state == "Both":
+        state.append("fixed")
 
     """
     Check remaining testcase that not generate
     """
-    validate_case = list(filter(lambda x: not x[0], [check_access_file(den, tc, s, t_value) for den in density for tc in testcase for t_value in t_initial for s in size]))
-    chuck = []
-    if run_state == "Fuzzy" or run_state == "Both":
-        chuck.extend(sorted(list(map(lambda x, fuzzy=True: (*x[1], fuzzy), validate_case))))
-    if run_state == "Fixed" or run_state == "Both":
-        chuck.extend(sorted(list(map(lambda x, fuzzy=False: (*x[1], fuzzy), validate_case))))
-
+    validate_case = list(filter(lambda x: not x[0], [check_access_file(den, tc, s, t_value, fuzz) 
+                                                     for den in density for tc in testcase for t_value in t_initial for s in size for fuzz in state]))
+    chuck = sorted(list(map(lambda x, fuzzy=True: x[1], validate_case)))
     print("Currently there are", len(chuck), "testcase that not generate yet.\n")
 
     """
