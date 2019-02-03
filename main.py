@@ -16,28 +16,28 @@ from itertools import product
 from Field import Field
 from Node import Node
 
-def check_access_file(tc, size, t_init):
+def check_access_file(density, tc, size, t_init):
     """
     Check that have been already generate testcase or not
     """
-    if not os.path.exists(config.root + "/R%02d/T%02d/%04d" % (size, t_init, tc)):
+    path = config.root + ("%.5f" % density) + ("_fuzzy" if is_fuzzy else "_fixed") + "/R%02d/T%d/%04d" % (density, size, t_init, tc)
+    if not os.path.exists(path):
         return False, (tc, size, t_init)
     else:
-        if os.path.exists(config.root + "/R%02d/T%02d/%04d/data.xlsx" % (size, t_init, tc)):
+        if os.path.exists(path + "/data.xlsx"):
             return True, (tc, size, t_init)
         else:
-            shutil.rmtree(config.root + "/R%02d/T%02d/%04d" % (size, t_init, tc))
+            shutil.rmtree(path)
             return False, (tc, size, t_init)
 
 
-def running(tc, size, t_init, is_fuzzy=True):
+def running(density, tc, size, t_init, is_fuzzy=True):
     #----------------------
     # Initial value
     # Change these value if you want new property
     #----------------------
     t_init = t_init / 100
-    density = config.density
-    path = config.root + "_" + ("fuzzy" if is_fuzzy else "fixed") + ("/R%02d/T%02d/%04d" % (size, int(t_init * 100), tc))
+    path = config.root + ("%.5f" % density) + "_" + ("fuzzy" if is_fuzzy else "fixed") + ("/R%02d/T%02d/%04d" % (size, int(t_init * 100), tc))
     # size = 10
     #----------------------
     standy_loop = config.standy_loop
@@ -162,7 +162,7 @@ if __name__ == "__main__":
     """
     Check remaining testcase that not generate
     """
-    validate_case = list(filter(lambda x: not x[0], [check_access_file(tc, s, t_value) for tc in testcase for t_value in t_initial for s in size]))
+    validate_case = list(filter(lambda x: not x[0], [check_access_file(den, tc, s, t_value) for den in density for tc in testcase for t_value in t_initial for s in size]))
     chuck = []
     if run_state == "Fuzzy" or run_state == "Both":
         chuck.extend(sorted(list(map(lambda x, fuzzy=True: (*x[1], fuzzy), validate_case))))
