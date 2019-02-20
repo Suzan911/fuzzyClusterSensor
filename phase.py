@@ -235,10 +235,11 @@ def standyPhase(field: Type[Field]) -> None:
     for node in field.getNodes('CH'):
         for member in node.getPointerNode():
             member.consume_transmit(4000, member.getDistanceFromNode(node))
+            member.setHyperRound(member.getHyperRound() - 1)
             node.consume_receive(4000)
         node.consume_Eproc(len(node.getPointerNode()) + 1)
         node.consume_transmit(4000, node.getDistanceFromNode(field.getBaseStation()))
-
+        node.setHyperRound(node.getHyperRound() - 1)
 
 def Fuzzy(node_energy: float, avg_energy: float, cluster_size: float, init_radius: float) -> float:
     """
@@ -268,6 +269,44 @@ def Fuzzy(node_energy: float, avg_energy: float, cluster_size: float, init_radiu
         count = count + i if weight and count >= 0 else i if weight else count
         start_mid_t += 0.0625
     return T_value / count
+
+
+def HRFuzzy(distance: float, energy: float, maximum_hr: int) -> float:
+    """
+    Hyper round Fuzzy algorithms
+    """
+    veryhigh = min((energy - 0.75) / (0.9 - 0.75), 1) if energy >= 0.75 else 0
+    high = min((energy - 0.5) / (0.7 - 0.5), 1) - max((energy - 0.7) / (0.9 - 0.7), 0) if 0.5 <= energy <= 0.9 else 0
+    medium = min((energy - 0.3) / (0.5 - 0.3), 1) - max((energy - 0.5) / (0.7 - 0.5), 0) if 0.3 <= energy <= 0.7 else 0
+    low = min((energy - 0.1) / (0.3 - 0.1), 1) - max((energy - 0.3) / (0.5 - 0.3), 0) if 0.1 <= energy <= 0.5 else 0
+    verylow = min(1 - max((energy - 0.1) / (0.3 - 0.1), 0), 1) if energy <= 0.3 else 0
+
+    far = min((distance - 0.5) / (0.95 - 0.5), 1) if distance >= 0.5 else 0
+    adequate = min((distance - 0.05) / (0.5 - 0.05), 1) - max((distance - 0.5) / (0.95 - 0.5), 0) if 0.05 <= distance <= 0.95 else 0
+    close = min(1 - max((distance - 0.05) / (0.5 - 0.05), 0), 1) if distance <= 0.5 else 0
+
+    rules = [sum([min(verylow, close),
+                  min(verylow, adequate),
+                  min(verylow, far)]) / 3, # Very low
+             sum([min(low, close),
+                  min(low, adequate)]) / 2, # Low
+             min(low, far), # Rather Low
+             min(medium, close), # Medium Low
+             min(medium, adequate), # Medium
+             min(medium, far), # Medium High
+             min(high, close), # Rather High
+             min(high, adequate), # High
+             sum([min(high, far),
+                  min(veryhigh, close),
+                  min(veryhigh, adequate),
+                  min(veryhigh, far)]) / 4] # Very High
+    mid_point = [0.05, 0.15, 0.25, 0.375, 0.5, 0.625, 0.75, 0.85, 0.95]
+
+    count, total = 0, 0
+    for i, value in enumerate(rules):
+        total += value * mid_point[i]
+        count += value if value != 0 else 0
+    return (total / count) * maximum_hr
 
 
 def adjustment_T_value(field: Type[Field], node: Type[Node]) -> float:

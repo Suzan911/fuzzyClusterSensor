@@ -12,7 +12,7 @@ class Field:
     """
     Object Field
     """
-    def __init__(self, width=1, height=1, density=0, radius=30, start_energy=3, r=1, t=0.2):
+    def __init__(self, width=1, height=1, density=0, radius=30, start_energy=3, r=0, t=0.2):
         """
         Initial variable for new field
         Args:
@@ -157,7 +157,11 @@ class Field:
         """
         Goto next round
         """
-        self.__round += 1
+        if any(map(lambda node: node.getEnergy() <= 0, self.getNodes())):
+            return 0
+        else:
+            self.__round += 1
+            return 1
 
     def resetNode(self):
         """
@@ -173,7 +177,7 @@ class Field:
             node.clearPackets()
         plt.clf()
 
-    def printField(self, testcase=0, rnd=0, showplot=0, radius=0):
+    def printField(self, path, testcase=0, rnd=0, showplot=0, radius=0):
         """
         Plot field
 
@@ -198,7 +202,7 @@ class Field:
         plt.title("Field")
         plt.legend(loc=0)
         if rnd:
-            plt.savefig(config.root + "/R%02d/T%02d/%04d/%04d" % (self.getRadius(), (self.__t * 100), testcase, rnd), dpi=72)
+            plt.savefig(path + ("/%04d.png" % (rnd)), dpi=72)
         if showplot:
             plt.show()
         plt.clf()

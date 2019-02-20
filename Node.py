@@ -21,6 +21,7 @@ class Node:
         self.__x = x
         self.__y = y
         self.__energy = energy
+        self.__initEnergy = energy
         self.__nodetype = nodetype
         self.__name = name
         self.__pointerNode = []
@@ -28,6 +29,8 @@ class Node:
         self.__t = t
         self.__delay = delay
         self.__state = state
+        self.__hyperround = 0
+        self.__init_hyperround = 0
 
         """
         Use to stored average residual energy if this node is CH
@@ -72,6 +75,14 @@ class Node:
             Position y of node
         """
         return self.__y
+
+    def getInitEnergy(self):
+        """
+        Get initial energy of node
+        Return
+            Initial energy of node
+        """
+        return self.__initEnergy
 
     def getEnergy(self):
         """
@@ -122,6 +133,31 @@ class Node:
         """
         return self.__t
 
+    def getSize(self):
+        """
+        Get size of Cluster Header node (CH) or 
+        return size of pointer cluster for Cluster member Node (CM)
+        Return
+            Cluster size
+        """
+        return self.__size
+
+    def getHyperRound(self):
+        """
+        Get remaining round of hyper round
+        Return
+            hyperround (int): Remaining round of hyper round
+        """
+        return self.__hyperround
+
+    def getInitialHyperRound(self):
+        """
+        Get initial hyper round from node
+        Return
+            init_hyperround (int): Amount of hyperround from start
+        """
+        return self.__init_hyperround
+
     def setType(self, nodetype):
         """
         Set node to new type
@@ -150,15 +186,6 @@ class Node:
         """
         self.__t = t
 
-    def getSize(self):
-        """
-        Get size of Cluster Header node (CH) or 
-        return size of pointer cluster for Cluster member Node (CM)
-        Return
-            Cluster size
-        """
-        return self.__size
-
     def setSize(self, size):
         """
         Set size of Cluster node
@@ -166,6 +193,23 @@ class Node:
             size (float): Size
         """
         self.__size = size
+
+    def setHyperRound(self, hr):
+        """
+        Set hyper round to hr
+        Args:
+            hr (int): Amount of hyper round
+        """
+        self.__hyperround = hr
+
+    def setInitialHyperRound(self, hr):
+        """
+        Set initial hyper round to hr
+        Args:
+            hr (int): Amount of hyper round
+        """
+        self.__init_hyperround = hr
+        self.__hyperround = hr
 
     def updateSize(self):
         """
@@ -209,7 +253,8 @@ class Node:
             Residual Energy
         """
         if self.getType() == 'CH':
-            return np.sum([node.getEnergy() for node in self.getPointerNode()])
+            total_energy = sum([node.getEnergy() for node in self.getPointerNode()])
+            return total_energy
         else:
             return self.getEnergy()
 
@@ -221,7 +266,7 @@ class Node:
             Header of this node or list of CM
         """
         # Need Fix
-        if self.getType() == 'CH':
+        if self.getType() == 'CH' or self.getType() == 'CCH':
             pointer = self.__pointerNode
         else:
             pointer = self.__pointerNode[0]
@@ -233,7 +278,7 @@ class Node:
         Args:
             node (Node): Header of this node
         """
-        if self.getType() != 'CH':
+        if self.getType() != 'CH' and self.getType() != 'CCH':
             self.__pointerNode.clear()
         self.__pointerNode.append(node)
 

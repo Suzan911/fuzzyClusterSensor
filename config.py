@@ -13,13 +13,14 @@ Variables
 	root        (str): Folder root path
 	pool        (int): Processer pool
 """
-testcase = range(1, 21)
-t_init = range(10, 91, 40)
+testcase = range(1, 6)
+t_init = [1000]
 size = range(10, 81, 5)
-density = 0.0125
+density = [0.00625]
 standy_loop = 1
-is_fuzzy = True # True if want to simulate fuzzy, False if want to simulate fixed T value
-root = "D0125fuzzy"
+run_state = "Both"
+
+root = "NCE."
 pool = 4
 width = 100
 height = 100
